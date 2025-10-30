@@ -1,0 +1,115 @@
+<?php
+
+/**
+ * Application Entry Point
+ */
+
+// Load environment variables
+require __DIR__ . '/../vendor/autoload.php';
+
+use Dotenv\Dotenv;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use FastRoute\RouteCollector;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+
+// Load .env file
+if (file_exists(__DIR__ . '/../.env')) {
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+    $dotenv->load();
+}
+
+// Setup Logger
+$logger = new Logger('app');
+$logFile = __DIR__ . '/../storage/logs/app.log';
+if (!is_dir(dirname($logFile))) {
+    mkdir(dirname($logFile), 0755, true);
+}
+$logger->pushHandler(new StreamHandler($logFile, $_ENV['LOG_LEVEL'] ?? 'debug'));
+
+// Setup Illuminate Database
+$capsule = new Capsule();
+
+$driver = $_ENV['DB_CONNECTION'] ?? 'sqlite';
+
+if ($driver === 'sqlite') {
+    $capsule->addConnection([
+        'driver' => 'sqlite',
+        'database' => __DIR__ . '/../' . ($_ENV['DB_DATABASE'] ?? 'database/database.sqlite'),
+        'prefix' => '',
+    ]);
+} else {
+    $capsule->addConnection([
+        'driver' => 'mysql',
+        'host' => $_ENV['DB_HOST'] ?? 'localhost',
+        'database' => $_ENV['DB_DATABASE'] ?? '',
+        'username' => $_ENV['DB_USERNAME'] ?? '',
+        'password' => $_ENV['DB_PASSWORD'] ?? '',
+        'charset' => 'utf8mb4',
+        'collation' => 'utf8mb4_unicode_ci',
+        'prefix' => '',
+    ]);
+}
+
+$capsule->setAsGlobal();
+$capsule->bootEloquent();
+
+// Route dispatcher
+$dispatcher = FastRoute\simpleDispatcher(function (RouteCollector $r) {
+    $routes = require __DIR__ . '/../config/routes.php';
+
+    foreach ($routes as $method => $routeGroup) {
+        foreach ($routeGroup as $path => $handler) {
+            $r->addRoute($method, $path, $handler);
+        }
+    }
+});
+
+// Fetch method and URI
+$method = $_SERVER['REQUEST_METHOD'];
+$uri = rawurldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+
+// Dispatch route
+$routeInfo = $dispatcher->dispatch($method, $uri);
+
+switch ($routeInfo[0]) {
+    case FastRoute\Dispatcher::NOT_FOUND:
+        http_response_code(404);
+        echo view('errors/404');
+        break;
+
+    case FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
+        http_response_code(405);
+        echo view('errors/405');
+        break;
+
+    case FastRoute\Dispatcher::FOUND:
+        $handler = $routeInfo[1];
+        $vars = $routeInfo[2];
+
+        // Simple dependency injection container
+        $container = require __DIR__ . '/../config/container.php';
+
+        try {
+            // Call controller method
+            if (is_array($handler)) {
+                [$class, $method] = $handler;
+
+                // Resolve controller from container
+                $controller = $container->get($class);
+                echo $controller->$method($vars);
+            } elseif (is_callable($handler)) {
+                echo $handler($vars);
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            $logger->error($e->getMessage(), ['exception' => $e]);
+
+            if ($_ENV['APP_DEBUG'] ?? false) {
+                echo '<pre>' . $e->getMessage() . "\n" . $e->getTraceAsString() . '</pre>';
+            } else {
+                echo view('errors/500');
+            }
+        }
+        break;
+}

@@ -1,0 +1,49 @@
+name: QA Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: PHP Tests & Analysis
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['8.2', '8.3', '8.4']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: pdo, pdo_sqlite, sqlite3, mbstring, curl, openssl
+      
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress
+      
+      - name: Run Code Formatter (Laravel Pint)
+        run: vendor/bin/pint --test
+      
+      - name: Run Static Analysis (PHPStan)
+        run: vendor/bin/phpstan analyse app
+        continue-on-error: true
+      
+      - name: Run Unit Tests
+        run: vendor/bin/phpunit tests/Unit --coverage-text
+      
+      - name: Run Feature/E2E Tests
+        run: vendor/bin/phpunit tests/Feature --coverage-text
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/clover.xml
+        continue-on-error: true
+

@@ -1,0 +1,15 @@
+{
+  "name": "tierdokumentation",
+  "version": "1.0.0",
+  "description": "Modern PHP WebApp with TailwindCSS",
+  "scripts": {
+    "build": "tailwindcss -i ./public/style.css -o ./public/dist/style.css --minify",
+    "watch": "tailwindcss -i ./public/style.css -o ./public/dist/style.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0"
+  }
+}
+

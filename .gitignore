@@ -1,0 +1,42 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Environment
+.env
+.env.prod
+
+# Database
+/database/*.sqlite
+/database/*.sqlite-journal
+
+# Logs
+/storage/logs/*.log
+
+# Build artifacts
+/public/dist/style.css
+/public/dist/*.css.map
+
+# IDE
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+/coverage/
+.phpunit.result.cache
+
+# Composer
+composer.lock
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
