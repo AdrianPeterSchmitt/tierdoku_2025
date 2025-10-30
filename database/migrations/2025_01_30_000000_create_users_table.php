@@ -14,3 +14,4 @@ return function ($schema) {
         $table->timestamps();
     });
 };
+

@@ -60,3 +60,4 @@ class HomePageTest extends TestCase
         }
     }
 }
+

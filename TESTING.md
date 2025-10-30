@@ -252,3 +252,4 @@ php -v
 - [PHPStan Dokumentation](https://phpstan.org/user-guide/getting-started)
 - [Laravel Pint Dokumentation](https://laravel.com/docs/pint)
 
+

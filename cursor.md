@@ -65,12 +65,20 @@
 php migrate.php
 ```
 
-**Query-Beispiel:**
+**Query-Beispiel (Eloquent):**
 ```php
-use Illuminate\Database\Capsule\Manager as DB;
+use App\Models\User;
 
-$users = DB::table('users')->get();
-$user = DB::table('users')->find($id);
+$users = User::all();
+$user = User::find($id);
+```
+
+**Query-Beispiel (Query Builder):**
+```php
+use Illuminate\Database\Capsule\Manager as Capsule;
+
+$users = Capsule::table('users')->get();
+$user = Capsule::table('users')->find($id);
 ```
 
 ### View-System
@@ -108,7 +116,7 @@ vendor/bin/pint
 vendor/bin/phpstan analyse app
 ```
 
-**Config:** `phpstan.neon` (Level 4)
+**Config:** `phpstan.neon` (Level 7)
 
 ### PHPUnit (Testing)
 
@@ -184,6 +192,8 @@ class NewController
 - nikic/fast-route
 - monolog/monolog
 - respect/validation
+- dompdf/dompdf
+- endroid/qr-code
 
 **Dev-Tools:**
 - phpunit/phpunit

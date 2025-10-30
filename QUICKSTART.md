@@ -95,3 +95,4 @@ Bei Problemen:
 2. Lies `INSTALLATION.md` für detaillierte Anleitung
 3. Lies `README.md` für Projekt-Informationen
 
+

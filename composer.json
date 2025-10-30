@@ -4,15 +4,17 @@
     "type": "project",
     "require": {
         "php": "^8.2",
-        "vlucas/phpdotenv": "^5.6",
-        "illuminate/database": "^11.0",
+        "dompdf/dompdf": "^3.1",
+        "endroid/qr-code": "^6.0",
         "illuminate/container": "^11.0",
+        "illuminate/database": "^11.0",
         "illuminate/events": "^11.0",
         "illuminate/view": "^11.0",
-        "nikic/fast-route": "^1.3",
         "monolog/monolog": "^3.8",
+        "nikic/fast-route": "^1.3",
         "respect/validation": "^2.3",
-        "symfony/var-dumper": "^7.0"
+        "symfony/var-dumper": "^7.0",
+        "vlucas/phpdotenv": "^5.6"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",
@@ -36,6 +38,9 @@
         "post-install-cmd": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ],
+        "serve": "php -S localhost:8000 -t public",
+        "migrate": "php migrate.php",
+        "seed": "php seed.php tierdoku",
         "test": "phpunit",
         "test:unit": "phpunit tests/Unit",
         "test:feature": "phpunit tests/Feature",
@@ -59,4 +64,3 @@
     "minimum-stability": "stable",
     "prefer-stable": true
 }
-

@@ -1,15 +1,30 @@
-# Tierdokumentation - Modern PHP WebApp
+# Tierdokumentation - Tierkremations-Verwaltungssystem
 
-Eine moderne, professionelle PHP WebApp mit MVC-Architektur, optimiert für Shared Hosting-Umgebungen.
+Eine vollständige, moderne PHP-Webapplikation für die Verwaltung von Tierkremationen für Animea Tierkrematorium.
 
-## 🚀 Features
+## 🚀 Hauptfunktionen
 
-- **FastRoute** - High-Performance Routing-System
-- **Illuminate Database** - Eloquent ORM mit Migrations
+- **🔐 Benutzer & Rollen**: Admin, Manager, Mitarbeiter mit standortbasierten Berechtigungen
+- **📊 Kremationsverwaltung**: Vollständiges CRUD mit Soft Deletes & Bulk Operations
+- **📱 QR-Code-System**: QR-Code-Generierung & Mobile Scanner
+- **📄 PDF-Labels**: Druckfertige Labels mit QR-Code
+- **📈 Statistik-Dashboard**: Charts & Metriken mit Chart.js
+- **🔍 Audit Logging**: Vollständiger Änderungshistorie
+- **📤 Export**: CSV-Export für externe Tools
+- **🎨 Modern UI**: Responsive Dark Theme mit TailwindCSS & Alpine.js
+
+## 🛠️ Technologie-Stack
+
+- **FastRoute** - High-Performance Routing
+- **Illuminate/Eloquent** - ORM mit Migrations
 - **TailwindCSS** - Utility-First CSS Framework
+- **Alpine.js** - Leichtgewichtiges JavaScript
+- **Chart.js** - Diagramme & Visualisierungen
+- **Dompdf** - PDF-Generierung
+- **Endroid QR Code** - QR-Code-Erstellung
 - **Monolog** - PSR-3 Logging
 - **Respect/Validation** - Input-Validierung
-- **QA-Tools** - PHPStan, PHPUnit, Laravel Pint
+- **QA-Tools** - PHPStan (Level 7), PHPUnit, Laravel Pint
 
 ## 📋 Voraussetzungen
 
@@ -54,6 +69,9 @@ DB_DATABASE=./database/database.sqlite
 ```bash
 # Migrationen ausführen
 php migrate.php
+
+# Seed-Daten einfügen (Standorte, Tierarten, Admin-User)
+php seed.php tierdoku
 ```
 
 ### 4. Assets bauen
@@ -73,6 +91,14 @@ php -S localhost:8000 -t public
 ```
 
 Dann öffne: **http://localhost:8000**
+
+### 🔑 Login
+
+**Standard-Admin-Account:**
+- **Benutzername**: `admin`
+- **Passwort**: `admin123`
+
+⚠️ **Wichtig**: Ändere das Admin-Passwort nach dem ersten Login!
 
 ## 📁 Projektstruktur
 

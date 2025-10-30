@@ -1,4 +1,22 @@
 <IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Verhindere direkten Zugriff auf versteckte Dateien (.env etc.)
+    RewriteRule "(^|/)[.].*" - [F]
+
+    # Wenn Datei oder Verzeichnis existiert, direkt ausliefern
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Sonst alles an public/index.php weiterleiten
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Fallback, falls mod_rewrite nicht aktiv ist
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
@@ -19,4 +37,5 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
 

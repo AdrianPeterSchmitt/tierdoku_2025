@@ -6,6 +6,7 @@
 
 // Load environment variables
 require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../app/helpers.php';
 
 use Dotenv\Dotenv;
 use Illuminate\Database\Capsule\Manager as Capsule;
@@ -54,6 +55,14 @@ if ($driver === 'sqlite') {
 $capsule->setAsGlobal();
 $capsule->bootEloquent();
 
+// Start session with security settings
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_secure', '0'); // Set to '1' when using HTTPS
+    ini_set('session.use_strict_mode', '1');
+    session_start();
+}
+
 // Route dispatcher
 $dispatcher = FastRoute\simpleDispatcher(function (RouteCollector $r) {
     $routes = require __DIR__ . '/../config/routes.php';
@@ -89,6 +98,25 @@ switch ($routeInfo[0]) {
 
         // Simple dependency injection container
         $container = require __DIR__ . '/../config/container.php';
+
+        // Define protected routes that require authentication
+        $protectedRoutes = ['/kremation', '/herkunft', '/users', '/statistics', '/notifications'];
+        $isProtectedRoute = in_array($uri, $protectedRoutes) || str_starts_with($uri, '/kremation/') || str_starts_with($uri, '/users/') || str_starts_with($uri, '/notifications/');
+        
+        // Check authentication for protected routes
+        if ($isProtectedRoute) {
+            $authService = $container->get(\App\Services\AuthService::class);
+            $currentUser = $authService->currentUser();
+            
+            if (!$currentUser) {
+                // Not authenticated, redirect to login
+                redirect('/login');
+                exit;
+            }
+            
+            // Set user in request for controllers
+            $_REQUEST['_user'] = $currentUser;
+        }
 
         try {
             // Call controller method
