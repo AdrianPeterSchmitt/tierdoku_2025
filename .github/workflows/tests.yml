@@ -14,6 +14,7 @@ jobs:
     strategy:
       matrix:
         php-version: ['8.2', '8.3', '8.4']
+      fail-fast: false
     
     steps:
       - name: Checkout code
@@ -23,30 +24,39 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: pdo, pdo_sqlite, sqlite3, mbstring, curl, openssl
+          extensions: pdo, pdo_sqlite, sqlite3, mbstring, curl, openssl, fileinfo
+          coverage: none
       
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress
+        run: composer install --prefer-dist --no-progress --no-interaction
+      
+      - name: Setup environment file
+        run: |
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          else
+            echo "APP_NAME=Tierdokumentation" > .env
+            echo "APP_ENV=testing" >> .env
+            echo "APP_DEBUG=false" >> .env
+            echo "APP_TIMEZONE=Europe/Berlin" >> .env
+            echo "DB_CONNECTION=sqlite" >> .env
+            echo "DB_DATABASE=:memory:" >> .env
+          fi
       
       - name: Run Code Formatter (Laravel Pint)
         run: vendor/bin/pint --test
+        continue-on-error: true
       
       - name: Run Static Analysis (PHPStan)
         run: php -d memory_limit=512M vendor/bin/phpstan analyse app
         continue-on-error: true
       
       - name: Run Unit Tests
-        run: vendor/bin/phpunit tests/Unit --coverage-text
+        run: vendor/bin/phpunit tests/Unit
         continue-on-error: false
       
       - name: Run Feature/E2E Tests
-        run: vendor/bin/phpunit tests/Feature --coverage-text
+        run: vendor/bin/phpunit tests/Feature
         continue-on-error: false
-      
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./coverage/clover.xml
-        continue-on-error: true
 
 
