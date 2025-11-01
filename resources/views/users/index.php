@@ -94,19 +94,22 @@
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Standort *</label>
-                    <select 
-                        name="standort_id" 
-                        x-model="formData.standort_id"
-                        :required="!isEditMode"
-                        class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white"
-                    >
-                        <option value="">- Auswählen -</option>
+                <div class="md:col-span-2 lg:col-span-3">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Standorte *</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
                         <?php foreach ($standorte as $s): ?>
-                        <option value="<?= $s->standort_id ?>"><?= htmlspecialchars($s->name) ?></option>
+                        <label class="flex items-center gap-2 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                :value="<?= $s->standort_id ?>"
+                                x-model="formData.standort_ids"
+                                class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                            >
+                            <span class="text-white text-sm"><?= htmlspecialchars($s->name) ?></span>
+                        </label>
                         <?php endforeach; ?>
-                    </select>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Non-Admin Benutzer müssen mindestens einen Standort haben</p>
                 </div>
             </div>
 
@@ -146,7 +149,7 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Name</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Email</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Rolle</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Standort</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Standorte</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Aktionen</th>
                     </tr>
                 </thead>
@@ -165,7 +168,12 @@
                                 <span class="px-2 py-1 bg-blue-500/20 text-blue-300 rounded text-xs">Mitarbeiter</span>
                             <?php endif; ?>
                         </td>
-                        <td class="px-4 py-3 text-sm"><?= htmlspecialchars($u->standort->name ?? '-') ?></td>
+                        <td class="px-4 py-3 text-sm">
+                            <?php 
+                            $standorteNames = $u->standorte->pluck('name')->toArray();
+                            echo htmlspecialchars(implode(', ', $standorteNames) ?: '-');
+                            ?>
+                        </td>
                         <td class="px-4 py-3 text-sm">
                             <div class="flex gap-1">
                                 <button type="button" @click="editUser(<?= $u->id ?>)" class="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs">
@@ -226,7 +234,7 @@ function userApp() {
             email: '',
             password: '',
             role: '',
-            standort_id: '',
+            standort_ids: [],
         },
         
         init() {
@@ -256,7 +264,7 @@ function userApp() {
                     email: user.email || '',
                     password: '',
                     role: user.role || '',
-                    standort_id: user.standort_id || '',
+                    standort_ids: user.standort_ids || [],
                 };
                 this.currentEditId = userId;
                 this.isEditMode = true;
@@ -278,7 +286,7 @@ function userApp() {
                 email: '',
                 password: '',
                 role: '',
-                standort_id: '',
+                standort_ids: [],
             };
             document.getElementById('user-form').reset();
         },
@@ -289,6 +297,15 @@ function userApp() {
             const flashMsg = document.getElementById('flash-message');
             
             const formData = new FormData(form);
+            
+            // Add standort_ids as array
+            formData.delete('standort_ids');
+            if (this.formData.standort_ids && Array.isArray(this.formData.standort_ids)) {
+                this.formData.standort_ids.forEach(id => {
+                    formData.append('standort_ids[]', id);
+                });
+            }
+            
             const url = this.isEditMode ? `/users/${this.currentEditId}` : '/users';
             
             try {

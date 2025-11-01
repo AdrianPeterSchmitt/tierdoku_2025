@@ -46,10 +46,11 @@ class StatisticsController
         // Build base query
         $query = Kremation::with(['standort', 'herkunft', 'tierarten']);
 
-        // Apply standort filter for non-admins
-        if (!$user->isAdmin()) {
-            $query->where('standort_id', $user->standort_id);
-        } elseif (!empty($_GET['standort_id'])) {
+        // Apply standort filter using scope
+        $query->forAllowedStandorte($user);
+        
+        // Admin can also filter by specific standort
+        if ($user->isAdmin() && !empty($_GET['standort_id'])) {
             $query->where('standort_id', $_GET['standort_id']);
         }
 
@@ -67,14 +68,23 @@ class StatisticsController
         // Calculate statistics
         $stats = $this->calculateStatistics($kremations);
 
-        // Get all standorte for filter
-        $standorte = Standort::aktiv()->get();
+        // Get standorte for filter: filtered for non-admins
+        if ($user->isAdmin()) {
+            $standorte = Standort::aktiv()->get();
+        } else {
+            $standorte = $user->standorte()->where('aktiv', true)->get();
+        }
 
         // Get all herkunfte for filter
         $herkunfteQuery = Herkunft::query();
         if (!$user->isAdmin()) {
-            // Non-admins: nur Herkünfte des eigenen Standorts
-            $herkunfteQuery->where('standort_id', $user->standort_id);
+            // Non-admins: nur Herkünfte der zugewiesenen Standorte
+            $allowedStandortIds = $user->getAllowedStandortIds();
+            if (!empty($allowedStandortIds)) {
+                $herkunfteQuery->whereIn('standort_id', $allowedStandortIds);
+            } else {
+                $herkunfteQuery->whereRaw('1 = 0'); // No results if no standorte
+            }
         }
         $herkunfte = $herkunfteQuery->orderBy('name')->get();
 

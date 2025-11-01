@@ -96,6 +96,12 @@ class KremationService
             }
 
             $standortId = $standort->standort_id;
+            
+            // Validate user has access to this standort
+            if (!$user->isAdmin() && !$user->hasStandort($standortId)) {
+                throw new InvalidArgumentException('Kein Zugriff auf diesen Standort.');
+            }
+            
             $nextVorgangsNr = Kremation::nextVorgangsNummer($standortId);
 
             // Get or create herkunft
@@ -165,6 +171,11 @@ class KremationService
 
             // Notify managers/admins
             $this->notifyManagers($kremation, $user, 'Neu erfasst: #' . $kremation->vorgangs_id);
+
+            // Set default standort for user (non-admins only)
+            if (!$user->isAdmin()) {
+                $user->setDefaultStandort($standortId);
+            }
 
             return $kremation;
         });
@@ -431,7 +442,7 @@ class KremationService
      * @param User $user
      * @return bool
      */
-    public function restore(int $id, User $user): bool
+    public function restore(int|string $id, User $user): bool
     {
         $kremation = Kremation::onlyTrashed()->find($id);
 

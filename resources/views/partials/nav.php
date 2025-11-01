@@ -16,17 +16,31 @@
     <!-- Mobile Menu -->
     <div x-show="open" x-cloak class="border-t border-gray-800 bg-gray-900/95 text-white">
         <nav class="w-full px-4 py-3 grid gap-2">
+            <!-- Hauptfunktionen -->
             <a href="/kremation" class="px-3 py-2 rounded-lg hover:bg-gray-800">🔥 Kremationen</a>
             <a href="/statistics" class="px-3 py-2 rounded-lg hover:bg-gray-800">📊 Statistiken</a>
+            
+            <!-- Scanner-Funktionen -->
+            <div class="border-t border-gray-700/50 my-1"></div>
             <a href="/kremation/scan" class="px-3 py-2 rounded-lg hover:bg-gray-800 bg-green-900/20 border border-green-500/30">📷 QR-Scanner (Schnell)</a>
             <a href="/kremation/batch-scan" class="px-3 py-2 rounded-lg hover:bg-gray-800">📦 Batch-Scan (Mehrere)</a>
-            <?php if ($user && $user->isAdmin()): ?>
-            <a href="/users" class="px-3 py-2 rounded-lg hover:bg-gray-800">👥 Benutzer</a>
-            <?php endif; ?>
+            
+            <!-- Verwaltung (Admin & Manager) -->
             <?php if ($user && ($user->isAdmin() || $user->isManager())): ?>
+            <div class="border-t border-gray-700/50 my-1"></div>
             <a href="/herkunft" class="px-3 py-2 rounded-lg hover:bg-gray-800">🏢 Herkünfte</a>
             <a href="/standort" class="px-3 py-2 rounded-lg hover:bg-gray-800">📍 Standorte</a>
             <?php endif; ?>
+            
+            <!-- Admin-Funktionen -->
+            <?php if ($user && $user->isAdmin()): ?>
+            <div class="border-t border-gray-700/50 my-1"></div>
+            <a href="/users" class="px-3 py-2 rounded-lg hover:bg-gray-800">👥 Benutzer</a>
+            <a href="/config" class="px-3 py-2 rounded-lg hover:bg-gray-800">⚙️ Konfiguration</a>
+            <?php endif; ?>
+            
+            <!-- Benutzer-Bereich -->
+            <div class="border-t border-gray-700/50 my-1"></div>
             <?php if ($user): ?>
             <div class="px-3 py-2 text-gray-300">👤 <?= htmlspecialchars($user->username) ?></div>
             <a href="/logout" class="px-3 py-2 rounded-lg hover:bg-gray-800">🚪 Logout</a>

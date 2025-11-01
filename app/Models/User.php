@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $password_hash
  * @property string $role
  * @property int|null $standort_id
+ * @property int|null $default_standort_id
  * @property string|null $reset_token
  * @property string|null $reset_token_expires
  * @property int $failed_login_attempts
@@ -34,6 +36,7 @@ class User extends Model
         'password_hash',
         'role',
         'standort_id',
+        'default_standort_id',
         'reset_token',
         'reset_token_expires',
         'failed_login_attempts',
@@ -52,7 +55,18 @@ class User extends Model
     ];
 
     /**
-     * Get standort
+     * Get standorte (many-to-many)
+     */
+    public function standorte(): BelongsToMany
+    {
+        return $this->belongsToMany(Standort::class, 'user_standort', 'user_id', 'standort_id')
+            ->withTimestamps()
+            ->where('aktiv', true); // Nur aktive Standorte
+    }
+
+    /**
+     * Get standort (legacy - kept for backwards compatibility)
+     * @deprecated Use standorte() instead
      */
     public function standort(): BelongsTo
     {
@@ -132,6 +146,62 @@ class User extends Model
     public function isLocked(): bool
     {
         return $this->locked_until && $this->locked_until > now();
+    }
+
+    /**
+     * Check if user has access to a specific standort
+     */
+    public function hasStandort(int $standortId): bool
+    {
+        if ($this->isAdmin()) {
+            return true; // Admins have access to all standorte
+        }
+        return $this->standorte()->where('standort_id', $standortId)->exists();
+    }
+
+    /**
+     * Get all allowed standort IDs for this user
+     */
+    public function getAllowedStandortIds(): array
+    {
+        if ($this->isAdmin()) {
+            // Admins see all active standorte
+            return Standort::where('aktiv', true)->pluck('standort_id')->toArray();
+        }
+        return $this->standorte()->pluck('standort_id')->toArray();
+    }
+
+    /**
+     * Get default standort ID for this user
+     * Returns default_standort_id if set and user has access, otherwise first assigned standort
+     */
+    public function getDefaultStandortId(): ?int
+    {
+        if ($this->isAdmin()) {
+            return null; // Admins have no default
+        }
+
+        // If default_standort_id is set and user still has access to it, return it
+        if ($this->default_standort_id && $this->hasStandort($this->default_standort_id)) {
+            return $this->default_standort_id;
+        }
+
+        // Otherwise, return first assigned standort
+        $firstStandort = $this->standorte()->first();
+        return $firstStandort ? $firstStandort->standort_id : null;
+    }
+
+    /**
+     * Set default standort for this user
+     */
+    public function setDefaultStandort(int $standortId): bool
+    {
+        if (!$this->hasStandort($standortId)) {
+            return false; // User doesn't have access to this standort
+        }
+
+        $this->default_standort_id = $standortId;
+        return $this->save();
     }
 }
 

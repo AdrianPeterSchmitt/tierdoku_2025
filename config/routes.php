@@ -9,6 +9,7 @@ use App\Controllers\StandortController;
 use App\Controllers\UserController;
 use App\Controllers\NotificationController;
 use App\Controllers\StatisticsController;
+use App\Controllers\ConfigController;
 
 return [
     // GET Routes
@@ -26,10 +27,12 @@ return [
         '/kremation/batch-scan' => [KremationController::class, 'batchScanQRCode'],
         '/herkunft' => [HerkunftController::class, 'index'],
         '/herkunft/{id}/edit' => [HerkunftController::class, 'edit'],
+        '/api/herkunft/by-standort/{standortName}' => [HerkunftController::class, 'getByStandortName'],
         '/standort' => [StandortController::class, 'index'],
         '/standort/{id}/edit' => [StandortController::class, 'edit'],
         '/users' => [UserController::class, 'index'],
         '/users/{id}/edit' => [UserController::class, 'edit'],
+        '/config' => [ConfigController::class, 'index'],
         '/statistics' => [StatisticsController::class, 'index'],
         '/notifications/unread-count' => [NotificationController::class, 'unreadCount'],
     ],
@@ -53,5 +56,6 @@ return [
         '/standort' => [StandortController::class, 'store'],
         '/standort/{id}' => [StandortController::class, 'update'],
         '/standort/{id}/delete' => [StandortController::class, 'delete'],
+        '/config' => [ConfigController::class, 'update'],
     ],
 ];

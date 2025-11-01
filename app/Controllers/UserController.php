@@ -44,7 +44,7 @@ class UserController
             exit;
         }
 
-        $users = User::with('standort')->orderBy('username', 'asc')->get();
+        $users = User::with('standorte')->orderBy('username', 'asc')->get();
         $standorte = Standort::aktiv()->get();
 
         return view('users/index', [
@@ -72,7 +72,7 @@ class UserController
         }
 
         $userId = (int) ($vars['id'] ?? 0);
-        $user = User::with('standort')->find($userId);
+        $user = User::with('standorte')->find($userId);
 
         if (!$user) {
             http_response_code(404);
@@ -88,7 +88,8 @@ class UserController
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
-                'standort_id' => $user->standort_id,
+                'standort_ids' => $user->standorte()->pluck('standort_id')->toArray(),
+                'default_standort_id' => $user->default_standort_id,
             ],
         ]);
     }
@@ -111,10 +112,34 @@ class UserController
 
         try {
             // Validate required fields
-            $required = ['username', 'email', 'password', 'role', 'standort_id'];
+            $required = ['username', 'email', 'password', 'role'];
             foreach ($required as $field) {
                 if (empty($_POST[$field])) {
                     throw new InvalidArgumentException("Feld '{$field}' ist erforderlich.");
+                }
+            }
+
+            // Validate standort_ids
+            $standortIds = $_POST['standort_ids'] ?? [];
+            if (!is_array($standortIds)) {
+                $standortIds = [];
+            }
+            $standortIds = array_filter(array_map('intval', $standortIds));
+
+            // Non-Admin User MUSS mindestens einen Standort haben
+            if ($_POST['role'] !== 'admin' && empty($standortIds)) {
+                throw new InvalidArgumentException('Non-Admin Benutzer muss mindestens einen Standort haben.');
+            }
+
+            // Validate that all standort IDs exist and are active
+            if (!empty($standortIds)) {
+                $validStandorte = Standort::whereIn('standort_id', $standortIds)
+                    ->where('aktiv', true)
+                    ->pluck('standort_id')
+                    ->toArray();
+                
+                if (count($validStandorte) !== count($standortIds)) {
+                    throw new InvalidArgumentException('Ungültige oder inaktive Standort-IDs.');
                 }
             }
 
@@ -130,8 +155,18 @@ class UserController
                 'email' => $_POST['email'],
                 'password_hash' => password_hash($_POST['password'], PASSWORD_ARGON2ID),
                 'role' => $_POST['role'],
-                'standort_id' => $_POST['standort_id'],
             ]);
+
+            // Sync standorte
+            if (!empty($standortIds)) {
+                $user->standorte()->sync($standortIds);
+                
+                // Set default_standort_id to first standort for non-admins
+                if (!$user->isAdmin()) {
+                    $user->default_standort_id = $standortIds[0];
+                    $user->save();
+                }
+            }
 
             echo json_encode([
                 'success' => true,
@@ -209,8 +244,59 @@ class UserController
                 $user->role = $_POST['role'];
             }
 
-            if (isset($_POST['standort_id'])) {
-                $user->standort_id = $_POST['standort_id'];
+            // Handle standort_ids
+            if (isset($_POST['standort_ids'])) {
+                $standortIds = $_POST['standort_ids'];
+                if (!is_array($standortIds)) {
+                    $standortIds = [];
+                }
+                $standortIds = array_filter(array_map('intval', $standortIds));
+
+                // Non-Admin User MUSS mindestens einen Standort haben
+                if ($user->role !== 'admin' && empty($standortIds)) {
+                    throw new InvalidArgumentException('Non-Admin Benutzer muss mindestens einen Standort haben.');
+                }
+
+                // Validate that all standort IDs exist and are active
+                if (!empty($standortIds)) {
+                    $validStandorte = Standort::whereIn('standort_id', $standortIds)
+                        ->where('aktiv', true)
+                        ->pluck('standort_id')
+                        ->toArray();
+                    
+                    if (count($validStandorte) !== count($standortIds)) {
+                        throw new InvalidArgumentException('Ungültige oder inaktive Standort-IDs.');
+                    }
+                }
+
+                // Sync standorte
+                $user->standorte()->sync($standortIds);
+
+                // Update default_standort_id if needed
+                if (!empty($standortIds) && (!$user->default_standort_id || !in_array($user->default_standort_id, $standortIds))) {
+                    // If current default is not in new list, set to first standort
+                    if (!$user->isAdmin()) {
+                        $user->default_standort_id = $standortIds[0];
+                    }
+                } elseif (empty($standortIds)) {
+                    // If no standorte, clear default
+                    $user->default_standort_id = null;
+                }
+            }
+
+            // Handle default_standort_id update if explicitly provided
+            if (isset($_POST['default_standort_id'])) {
+                $defaultStandortId = !empty($_POST['default_standort_id']) ? (int) $_POST['default_standort_id'] : null;
+                if ($defaultStandortId) {
+                    // Validate that user has access to this standort
+                    $standortIds = $user->standorte()->pluck('standort_id')->toArray();
+                    if (!in_array($defaultStandortId, $standortIds)) {
+                        throw new InvalidArgumentException('Default-Standort muss in den zugewiesenen Standorten enthalten sein.');
+                    }
+                    $user->default_standort_id = $defaultStandortId;
+                } else {
+                    $user->default_standort_id = null;
+                }
             }
 
             $user->save();

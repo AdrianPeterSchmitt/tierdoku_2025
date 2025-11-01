@@ -40,4 +40,7 @@ composer.lock
 *.bak
 *.log
 
+# Test files
+test_label.pdf
+
 

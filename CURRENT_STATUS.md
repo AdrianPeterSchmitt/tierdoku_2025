@@ -1,304 +1,220 @@
-# Tierdokumentation - Aktueller Stand (2025)
+# Aktueller Projekt-Status
 
-## 📋 Projekt-Übersicht
+**Stand:** 2025-02-03  
+**Letzte Änderungen:** Standort-spezifische Nummernkreise, Dynamische Herkunft-Filterung, Multi-Location-Support
 
-Vollständige, produktionsreife Web-Anwendung für die Verwaltung von Tierkremationen für Animea Tierkrematorium.
+## ✅ Implementierte Features
 
-**Status:** ✅ Produktionsreif | **Version:** 1.0.0 | **Letzte größere Aktualisierung:** 2025
+### 1. Standort-spezifische Nummernkreise mit Prefix
+- **Status:** ✅ Implementiert & Migriert
+- **Format:** `{PREFIX}{NUMMER}` (z.B. LAU001, SCH002)
+- **Prefix:** Erste 3 Buchstaben des Standort-Namens (Großbuchstaben)
+- **Nummer:** 3-stellige fortlaufende Nummer pro Standort (001, 002, 003...)
+- **Migration:** `2025_02_03_000001_change_vorgangs_id_to_string.php`
+- **Model-Änderungen:**
+  - `Standort::getPrefix()` - Prefix-Generierung
+  - `Kremation::nextVorgangsNummer()` - Generiert String-Format mit Prefix
+  - `Kremation::scopeSearch()` - Unterstützt String-IDs
+- **Datenbank:**
+  - `vorgangs_id`: VARCHAR(20) (String Primary Key)
+  - `kremation_tiere.kremation_id`: VARCHAR(20)
+  - `audit_log.record_id`: VARCHAR(50)
+- **Initial-Migration:** Aktualisiert für neue Installationen (String-Format direkt)
 
----
+### 2. Dynamische Herkunft-Filterung
+- **Status:** ✅ Implementiert
+- **Funktion:** Herkunft-Dropdown wird dynamisch basierend auf ausgewähltem Standort gefiltert
+- **API-Route:** `GET /api/herkunft/by-standort/{standortName}`
+- **Controller:** `HerkunftController::getByStandortName()`
+- **Frontend:** Alpine.js `loadHerkunfteForStandort()` Funktion
+- **Features:**
+  - Automatisches Laden beim Standort-Wechsel
+  - Lade-Anzeige während API-Call
+  - Deaktiviert, wenn kein Standort ausgewählt
 
-## ✅ Vollständig implementierte Features
+### 3. Multi-Location-Support für Benutzer
+- **Status:** ✅ Implementiert & Migriert
+- **Migration:** `2025_02_02_000001_create_user_standort_table.php`
+- **Features:**
+  - User können mehreren Standorten zugeordnet werden (Many-to-Many)
+  - Checkbox-Gruppe in User-Formular für Standort-Auswahl
+  - Default-Standort für non-Admin User
+  - Automatisches Setzen des Default-Standorts bei Kremation-Erstellung
+  - Last-Selected-Standort wird in localStorage gespeichert
+- **Model-Änderungen:**
+  - `User::standorte()` - BelongsToMany Relation
+  - `User::getDefaultStandortId()` - Default-Standort-Logik
+  - `User::hasStandort()` - Zugriffsprüfung
+  - `User::getAllowedStandortIds()` - Liste erlaubter Standorte
 
-### 🔐 Authentifizierung & Autorisierung
-- ✅ Login/Logout-System mit Session-Management
-- ✅ 3 Rollen: Admin, Manager, Mitarbeiter
-- ✅ Session Timeout (30 Minuten) mit Warnung
-- ✅ Rate Limiting (5 Versuche pro 15 Minuten)
-- ✅ Account Locking nach fehlgeschlagenen Versuchen
-- ✅ Standort-basierte Berechtigungen
+### 4. Inline-Editing Pattern
+- **Status:** ✅ Implementiert
+- **Bereiche:** User, Herkunft, Standort
+- **Features:**
+  - Einheitliches Formular für Add/Edit
+  - Alpine.js State Management (`isEditMode`, `formData`)
+  - Custom Delete-Confirmation-Modals
+  - Konsistente Button-Größen und Styling
 
-### 📊 Kern-Funktionalität
-- ✅ **Kremations-CRUD**: Vollständiges Create, Read, Update, Delete
-- ✅ **Inline-Editing**: Direkte Bearbeitung in Formularen (Kremationen, User, Herkunft, Standort)
-- ✅ **Soft Deletes** mit Wiederherstellungs-Funktion
-- ✅ **Bulk Operations**: Mehrere Kremationen gleichzeitig verwalten
-- ✅ **Standort-Management**: 3 Standorte (Laudenbach, Usingen, Schwarzwald) mit Inline-Editing
-- ✅ **Herkunft-Management**: Dynamisches Anlegen mit Inline-Editing
-- ✅ **Tierart-Tracking**: Vogel, Heimtier, Katze, Hund
-- ✅ **Benutzer-Verwaltung**: Inline-Editing, Admin-Schutz (Admin kann nicht gelöscht werden)
+### 5. Konfigurationsseite
+- **Status:** ✅ Implementiert
+- **Route:** `/config` (nur Admin)
+- **Features:**
+  - Verwaltung aller `.env` Einstellungen
+  - QR-Code-Konfiguration (Größe, Margin, Encoding, Error Correction)
+  - PDF-Label-Konfiguration (Papiergröße, Schriftgrößen, QR-Code-Parameter)
+  - Database-Einstellungen
+  - Session-Einstellungen
+  - Backup-Funktionalität vor Änderungen
 
-### 📱 QR-Code-System
-- ✅ **QR-Code-Generierung**: Für jede Kremation (PNG/SVG Fallback)
-- ✅ **QR-Code-Ansicht**: Mit Druckfunktion
-- ✅ **Einzel-Scanner**: QR-Code Scanner für einzelne Beutel (automatischer Abschluss)
-- ✅ **Batch-Scanner**: Mehrere Kremationen nacheinander scannen und zusammen abschließen
-- ✅ **Kamera-Support**: HTML5-Kamera API (Webcam/Handy-Kamera)
-- ✅ **Duplikat-Erkennung**: Automatische Erkennung bereits gescannter Kremationen
-- ✅ **Mobile-Support**: Optimiert für Tablets und Smartphones
+### 6. Installer
+- **Status:** ✅ Implementiert
+- **Datei:** `public/install.php`
+- **Features:**
+  - System-Checks (PHP-Version, Extensions, Permissions)
+  - `.env` Erstellung mit Formular
+  - Datenbank-Connection-Test
+  - Automatische Migration-Ausführung
+  - Erfolgs-Instructions
 
-### 📄 PDF-Label-System
-- ✅ **Professionelle PDF-Labels**: Mit allen Kremationsdaten
-- ✅ **QR-Code integriert**: Im PDF eingebettet
-- ✅ **Druckfertig**: A4-Format
-- ✅ **Automatischer Download**: Nach Generierung
+## 📁 Wichtige Dateien & Struktur
 
-### 📈 Statistik-Dashboard
-- ✅ **KPI-Karten**: Gesamt, Offen, Abgeschlossen, Ø Gewicht
-- ✅ **Timeline-Chart**: Letzte 30 Tage
-- ✅ **Verteilungs-Charts**: Nach Standort, Herkunft, Tierart
-- ✅ **Status-Pie-Chart**: Offen vs. Abgeschlossen
-- ✅ **Filter**: Nach Datum, Standort und Herkunft
-- ✅ **24-Stunden-Format**: Alle Datum/Zeit-Felder
-
-### 👥 Verwaltungs-Interfaces
-- ✅ **User-Verwaltung**: Inline-Editing, Delete mit Bestätigungs-Modal, Admin-Schutz
-- ✅ **Herkunft-Verwaltung**: Inline-Editing, Delete mit Bestätigungs-Modal
-- ✅ **Standort-Verwaltung**: Inline-Editing, Delete mit Bestätigungs-Modal, Aktiv/Inaktiv Toggle
-- ✅ **Kremation-Verwaltung**: Inline-Editing mit 24h-Datum/Zeit-Picker
-
-### 🎨 UI/UX Features
-- ✅ **Navigation**: Burger-Menü mit Icons auf allen Seiten
-- ✅ **Custom Modals**: Styled Delete-Bestätigungs-Dialoge (ersetzt Browser confirm())
-- ✅ **Konsistente Buttons**: Standard-Größe (w-[150px], px-8 py-3, font-semibold)
-- ✅ **Responsive Design**: Desktop, Tablet, Mobile
-- ✅ **Dark Theme**: Modernes UI-Design
-- ✅ **Flash Messages**: Benutzerfeedback
-
----
-
-## 🛠️ Technischer Stack
-
-### Backend
-- **PHP** 8.2+
-- **FastRoute** - High-Performance Routing
-- **Illuminate/Eloquent** - ORM mit Migrations
-- **Monolog** - PSR-3 Logging
-- **Respect/Validation** - Input-Validierung
-- **Dompdf** - PDF-Generierung
-- **Endroid QR Code** - QR-Code-Erstellung (v6.0.9)
-
-### Frontend
-- **TailwindCSS** - Utility-First CSS Framework
-- **Alpine.js** 3.x - Leichtgewichtiges JavaScript Framework
-- **Chart.js** - Diagramme & Visualisierungen
-- **HTML5-QRCode** - QR-Code-Scanner
-
-### Development Tools
-- **PHPStan** Level 7 - Statische Code-Analyse
-- **PHPUnit** - Unit & Feature Tests
-- **Laravel Pint** - Code-Formatierung
-
----
-
-## 📂 Wichtige Dateien & Verzeichnisse
-
-### Controllers
-- `app/Controllers/KremationController.php` - Haupt-Controller für Kremationen (inkl. QR/Scan/Complete)
-- `app/Controllers/UserController.php` - User-Verwaltung mit Inline-Editing
-- `app/Controllers/HerkunftController.php` - Herkunft-Verwaltung mit Inline-Editing
-- `app/Controllers/StandortController.php` - Standort-Verwaltung mit Inline-Editing
-- `app/Controllers/StatisticsController.php` - Statistik-Dashboard mit Filterung
-- `app/Controllers/AuthController.php` - Authentifizierung
-
-### Services
-- `app/Services/QRCodeService.php` - QR-Code-Generierung (PNG/SVG Fallback)
-- `app/Services/PDFLabelService.php` - PDF-Label-Generierung
-- `app/Services/KremationService.php` - Business-Logik für Kremationen (inkl. Complete-Funktion)
-- `app/Services/AuthService.php` - Authentifizierung & Session-Management
-- `app/Services/AuditService.php` - Audit-Logging
-- `app/Services/NotificationService.php` - Benachrichtigungen
-
-### Views
-- `resources/views/kremation/index.php` - Haupt-Kremations-Verwaltung (Inline-Editing, 24h-Datetime)
-- `resources/views/kremation/scan.php` - Einzel-Scanner (automatischer Abschluss)
-- `resources/views/kremation/batch-scan.php` - Batch-Scanner (mehrere Kremationen)
-- `resources/views/kremation/qr-code.php` - QR-Code-Anzeige
-- `resources/views/users/index.php` - User-Verwaltung (Inline-Editing, Delete-Modal)
-- `resources/views/herkunft/index.php` - Herkunft-Verwaltung (Inline-Editing, Delete-Modal)
-- `resources/views/standort/index.php` - Standort-Verwaltung (Inline-Editing, Delete-Modal, Toggle)
-- `resources/views/statistics/index.php` - Statistik-Dashboard (Filter: Datum, Standort, Herkunft)
-- `resources/views/partials/nav.php` - Navigation (Burger-Menü mit Icons)
+### Migrations
+```
+database/migrations/
+├── 2025_01_30_000000_create_users_table.php
+├── 2025_01_31_000000_create_tierdoku_tables.php (aktualisiert: String vorgangs_id)
+├── 2025_02_01_000001_add_standort_to_herkunft.php
+├── 2025_02_02_000001_create_user_standort_table.php
+└── 2025_02_03_000001_change_vorgangs_id_to_string.php
+```
 
 ### Models
-- `app/Models/Kremation.php` - Haupt-Model mit Relationships
-- `app/Models/User.php` - User-Model (mit @property string $name)
-- `app/Models/Herkunft.php` - Herkunft-Model
-- `app/Models/Standort.php` - Standort-Model
-
-### Routing
-- `config/routes.php` - Alle Routes (inkl. `/standort/{id}/edit`, `/herkunft/{id}/edit`, `/users/{id}/edit`)
-- `public/index.php` - Entry Point (protected routes check)
-
----
-
-## 🔑 Wichtige Implementierungsdetails
-
-### Inline-Editing Pattern
-Alle Verwaltungs-Interfaces (User, Herkunft, Standort, Kremation) nutzen das gleiche Inline-Editing-Pattern:
-1. Formular wechselt zwischen "Hinzufügen" und "Bearbeiten" Modus
-2. `edit{Entity}(id)` Funktion lädt Daten via API (`/entity/{id}/edit`)
-3. Daten werden ins Formular geladen, `isEditMode = true`
-4. Formular scrollt automatisch in den Viewport
-5. `handleSubmit()` erkennt Modus und verwendet passende Route (POST /entity vs. POST /entity/{id})
-
-### Delete-Modals
-- Custom styled Delete-Bestätigungs-Modals (ersetzt `confirm()`)
-- Konsistente Button-Größen (`w-[150px]`, `px-8 py-3`, `font-semibold`)
-- Warnungen bei eingeschränkten Löschungen (Admin, Verwendungen)
-- Server-seitige Validierung verhindert fehlerhafte Löschungen
-
-### Datum/Zeit-Handling
-- **24-Stunden-Format**: Separates Date- und Time-Input (kein datetime-local)
-- Kombination aus `type="date"`, `type="number"` (Stunde), `type="number"` (Minute)
-- JavaScript kombiniert Werte in verstecktes `Einaescherungsdatum` Feld
-- Layout-Optimierung verhindert abgeschnittene Zahlen
-
-### QR-Code-System
-- **GD-Extension Fallback**: Wenn GD nicht verfügbar, wird SVG statt PNG verwendet
-- `QRCodeService->getLastMimeType()` gibt MIME-Type zurück
-- PDF-Labels unterstützen beide Formate (PNG/SVG)
-
-### Navigation
-- Burger-Menü mit Icons auf allen Seiten
-- Alpine.js für Toggle-Funktionalität
-- `x-cloak` verhindert Flackern beim Laden
-
----
-
-## 🔧 Aktuelle Konfiguration
-
-### Routes
-- `GET /standort/{id}/edit` - Standort-Daten für Inline-Editing
-- `GET /herkunft/{id}/edit` - Herkunft-Daten für Inline-Editing
-- `GET /users/{id}/edit` - User-Daten für Inline-Editing
-- `POST /kremation/complete` - Kremation abschließen (setzt einaescherungsdatum)
-
-### Protected Routes
-Routes, die Authentifizierung erfordern:
-- `/kremation`, `/kremation/*`
-- `/herkunft`, `/herkunft/*`
-- `/standort`, `/standort/*`
-- `/users`, `/users/*`
-- `/statistics`, `/notifications/*`
-
-### Datenbank-Schema
-Haupttabellen:
-- `users` - Benutzer mit Rollen (name, username, email, role, standort_id)
-- `standort` - Standorte (name, aktiv)
-- `herkunft` - Herkunftsorte (name, standort_id)
-- `kremation` - Haupt-Kremations-Tabelle (inkl. einaescherungsdatum für Abschluss)
-- `kremation_tiere` - Pivot für Tierarten
-- `audit_log` - Audit-Trail
-- `notifications` - Benachrichtigungen
-
----
-
-## 🚀 Setup & Installation
-
-### Dependencies
-```bash
-composer install
-npm install
+```
+app/Models/
+├── Kremation.php (vorgangs_id: string, nextVorgangsNummer() mit Prefix)
+├── Standort.php (getPrefix() Methode)
+├── User.php (Multi-Location Support)
+└── ...
 ```
 
-### Environment
-```bash
-cp .env.example .env
-# Bearbeite .env für lokale Entwicklung
+### Controllers
+```
+app/Controllers/
+├── KremationController.php (String-ID Support)
+├── HerkunftController.php (getByStandortName() API)
+├── UserController.php (Multi-Location)
+├── ConfigController.php (Konfigurationsseite)
+└── ...
 ```
 
-### Datenbank
-```bash
-php migrate.php
-php seed.php tierdoku
+### Services
+```
+app/Services/
+├── KremationService.php (String-ID Support)
+├── AuditService.php (int|string recordId)
+├── QRCodeService.php (Konfigurierbar)
+└── PDFLabelService.php (Konfigurierbar)
 ```
 
-### Assets
-```bash
-npm run build
-```
-
-### Server starten
-```bash
-php -S localhost:8000 -t public
-```
-
-### Login
-- **URL**: http://localhost:8000/login
-- **Username**: admin
-- **Password**: admin123
-
----
-
-## 📊 Code-Qualität
+## 🔧 Code-Qualität
 
 ### PHPStan
-```bash
-php -d memory_limit=512M vendor/bin/phpstan analyse
-```
-**Status:** ✅ Keine Fehler (Level 7)
+- **Level:** 7
+- **Status:** ⚠️ 15 Fehler (meist Type-Hints, nicht kritisch)
+- **Kritische Fehler:** ✅ Behoben
+  - `AuditService::log()` - `int|string $recordId`
+  - `KremationService::restore()` - `int|string $id`
+  - `ConfigController::readEnvFile()` - file() Rückgabewert-Prüfung
 
-### Test-Suite
-```bash
-composer test
-```
+### Verbleibende PHPStan-Warnungen (nicht kritisch):
+- Scope-Methoden Return-Types (Eloquent Builder vs Query Builder)
+- Array-Iterable Types (getAllowedStandortIds())
+- Standorte() Relation Return-Type
+
+## 🗄️ Datenbank-Struktur
+
+### Kremation
+- `vorgangs_id`: VARCHAR(20) PRIMARY KEY (Format: LAU001, SCH002, etc.)
+- `standort_id`: Foreign Key
+- `herkunft_id`: Foreign Key
+- ...
+
+### User_Standort (Pivot Table)
+- `user_id`: Foreign Key
+- `standort_id`: Foreign Key
+- `default_standort_id`: Foreign Key (nullable)
+
+### Audit_Log
+- `record_id`: VARCHAR(50) (unterstützt int und string)
+
+## 🚀 Nächste Schritte / Offene Punkte
+
+### Optional (nicht kritisch):
+1. **PHPStan-Warnungen beheben:**
+   - PHPDoc für Scope-Methoden verbessern
+   - Array-Types spezifizieren (`@return array<int>`)
+   - Relation Return-Types korrigieren
+
+2. **Tests erweitern:**
+   - Unit-Tests für Prefix-Generierung
+   - Feature-Tests für Nummernkreis-System
+   - API-Tests für Herkunft-Filterung
+
+3. **Dokumentation:**
+   - API-Dokumentation für neue Endpoints
+   - Migration-Guide für bestehende Installationen
+
+## 📝 Wichtige Hinweise für Weiterarbeit
+
+### Prefix-System
+- Prefix wird aus ersten 3 Buchstaben des Standort-Namens generiert
+- Zu kurz? → Wird mit 'X' aufgefüllt
+- Maximale Anzahl pro Standort: 999 (dann kann auf 4-stellig erweitert werden)
+
+### Migration-Reihenfolge
+1. Bestehende Installationen: Migration `2025_02_03_000001` wird automatisch erkannt und übersprungen wenn bereits migriert
+2. Neue Installationen: Verwenden direkt String-Format aus Initial-Migration
+
+### String-IDs vs Integer-IDs
+- `vorgangs_id` ist jetzt immer String (Format: LAU001)
+- `AuditService::log()` akzeptiert `int|string` für `recordId`
+- Alle Controller-Methoden verwenden String für `vorgangs_id`
+
+### Multi-Location-Logik
+- Non-Admin User: Können nur ihre zugewiesenen Standorte sehen/verwenden
+- Admin User: Sehen alle Standorte
+- Default-Standort: Wird automatisch beim ersten Kremation-Erstellen gesetzt
+- Last-Selected: Wird in localStorage gespeichert und beim nächsten Besuch vorausgewählt
+
+### Herkunft-Filterung
+- API-Endpoint: `/api/herkunft/by-standort/{standortName}`
+- Authentifizierung: Erforderlich (geschützte Route)
+- Zugriffsprüfung: User muss Zugriff auf den Standort haben
+- Automatisches Laden: Beim Standort-Wechsel im Kremation-Formular
+
+## 🔐 Sicherheit
+
+- Alle API-Routes sind geschützt (authentifiziert)
+- Zugriffsprüfung für Standorte (non-Admin User)
+- CSRF-Schutz für Formulare
+- Input-Validierung in Services
+
+## 🎨 UI/UX
+
+- Inline-Editing: User, Herkunft, Standort
+- Custom Modals: Delete-Confirmations (keine Browser-alerts)
+- Konsistente Button-Größen und Styling
+- Dynamische Formular-Elemente (Herkunft-Dropdown)
+- Loading-States für API-Calls
+
+## 📊 Migration-Status
+
+- ✅ Alle Migrations ausgeführt
+- ✅ Bestehende Daten migriert (LAU001, LAU002, USI001, etc.)
+- ✅ Neue Installationen verwenden direkt String-Format
 
 ---
 
-## 🔄 Workflow für Weiterentwicklung
-
-### 1. Entwicklung
-- Änderungen lokal testen
-- PHPStan ausführen: `php -d memory_limit=512M vendor/bin/phpstan analyse`
-- Tests ausführen: `composer test`
-
-### 2. Commits
-- Sinnvolle Commit-Messages verwenden
-- Änderungen nach Feature gruppieren
-
-### 3. Push
-```bash
-git add -A
-git commit -m "Feature: Beschreibung"
-git push
-```
-
----
-
-## 📝 Nächste Schritte (Optionale Erweiterungen)
-
-### Mögliche Features
-- [ ] E-Mail-Benachrichtigungen
-- [ ] REST API für externe Integrationen
-- [ ] Erweiterte Reports
-- [ ] Multi-Language Support (i18n)
-- [ ] Advanced Search mit Filtern
-- [ ] Export-Funktionen erweitern (Excel, etc.)
-
-### UI-Verbesserungen
-- [ ] Keyboard-Shortcuts
-- [ ] Drag & Drop für Datei-Uploads
-- [ ] Dark/Light Theme Toggle
-
----
-
-## 🐛 Bekannte Einschränkungen
-
-1. **QR-Code GD-Extension**: Wenn GD nicht verfügbar, wird SVG verwendet (funktioniert aber)
-2. **Kamera-Support**: Funktioniert am besten auf mobilen Geräten, Desktop-Webcams funktionieren auch
-3. **DateTime-Picker**: Native HTML5-Inputs für bessere Browser-Kompatibilität
-
----
-
-## 📞 Support
-
-Bei Fragen zur Weiterentwicklung:
-- Code-Struktur in `cursor.md`
-- API-Dokumentation in `README.md`
-- Installation in `INSTALLATION.md`
-
----
-
-**Stand:** 2025 | **Version:** 1.0.0 | **Status:** ✅ Produktionsreif
+**Für Fragen oder Probleme:** Siehe README.md oder CONTRIBUTING.md
 

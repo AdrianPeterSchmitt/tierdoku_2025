@@ -23,12 +23,21 @@ class HerkunftController
     {
         /** @var User $user */
         $user = $_REQUEST['_user'] ?? null;
-        $standorte = Standort::orderBy('name')->get();
+        
+        // Get standorte for filter: filtered for non-admins
+        if ($user && !$user->isAdmin()) {
+            $standorte = $user->standorte()->where('aktiv', true)->orderBy('name')->get();
+        } else {
+            $standorte = Standort::orderBy('name')->get();
+        }
 
         $currentStandortId = null;
         if ($user && !$user->isAdmin()) {
-            $currentStandortId = $user->standort_id;
+            // Non-admins: use default standort or first assigned standort
+            $allowedStandortIds = $user->getAllowedStandortIds();
+            $currentStandortId = !empty($allowedStandortIds) ? $allowedStandortIds[0] : null;
         } else {
+            // Admins: use GET parameter or first standort
             $currentStandortId = isset($_GET['standort_id']) && $_GET['standort_id'] !== ''
                 ? (int) $_GET['standort_id']
                 : ($standorte[0]->standort_id ?? null);
@@ -37,6 +46,14 @@ class HerkunftController
         $query = Herkunft::orderBy('name', 'asc');
         if ($currentStandortId) {
             $query->where('standort_id', $currentStandortId);
+        } elseif ($user && !$user->isAdmin()) {
+            // If no current standort but user is not admin, show herkunfte from all allowed standorte
+            $allowedStandortIds = $user->getAllowedStandortIds();
+            if (!empty($allowedStandortIds)) {
+                $query->whereIn('standort_id', $allowedStandortIds);
+            } else {
+                $query->whereRaw('1 = 0'); // No results if no standorte
+            }
         }
         $herkuenfte = $query->get();
         
@@ -200,6 +217,65 @@ class HerkunftController
 
         $h->delete();
         return (string) json_encode(['success' => true]);
+    }
+
+    /**
+     * Get herkunfte by standort name (API endpoint)
+     * 
+     * @param array<string, mixed> $vars
+     * @return void
+     */
+    public function getByStandortName(array $vars): void
+    {
+        /** @var User $user */
+        $user = $_REQUEST['_user'] ?? null;
+        header('Content-Type: application/json');
+
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Nicht authentifiziert']);
+            return;
+        }
+
+        $standortName = $vars['standortName'] ?? '';
+        if (empty($standortName)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Standort-Name erforderlich']);
+            return;
+        }
+
+        // Find standort by name
+        $standort = Standort::where('name', $standortName)->first();
+        if (!$standort) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => 'Standort nicht gefunden']);
+            return;
+        }
+
+        // Validate user has access to this standort (for non-admins)
+        if (!$user->isAdmin() && !$user->hasStandort($standort->standort_id)) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Keine Berechtigung für diesen Standort']);
+            return;
+        }
+
+        // Get herkunfte for this standort
+        $herkuenfte = Herkunft::where('standort_id', $standort->standort_id)
+            ->orderBy('name', 'asc')
+            ->get();
+
+        // Format response
+        $result = $herkuenfte->map(function ($herkunft) {
+            return [
+                'herkunft_id' => $herkunft->herkunft_id,
+                'name' => $herkunft->name,
+            ];
+        })->toArray();
+
+        echo json_encode([
+            'success' => true,
+            'herkunfte' => $result,
+        ]);
     }
 }
 

@@ -25,9 +25,24 @@ class QRCodeService
      * @param int $size
      * @return string Base64 encoded image (PNG or SVG)
      */
-    public function generateForKremation(Kremation $kremation, int $size = 300): string
+    public function generateForKremation(Kremation $kremation, ?int $size = null): string
     {
         $data = $this->buildQRData($kremation);
+
+        // Get configuration from .env or use defaults
+        $size = $size ?? (int) ($_ENV['QR_CODE_SIZE'] ?? 300);
+        $margin = (int) ($_ENV['QR_CODE_MARGIN'] ?? 10);
+        $encoding = $_ENV['QR_CODE_ENCODING'] ?? 'UTF-8';
+        $errorCorrection = $_ENV['QR_CODE_ERROR_CORRECTION'] ?? 'High';
+
+        // Map error correction string to enum
+        $errorCorrectionLevel = match(strtolower($errorCorrection)) {
+            'low' => ErrorCorrectionLevel::Low,
+            'medium' => ErrorCorrectionLevel::Medium,
+            'quartile' => ErrorCorrectionLevel::Quartile,
+            'high' => ErrorCorrectionLevel::High,
+            default => ErrorCorrectionLevel::High,
+        };
 
         // Check if GD extension is available for PNG generation
         if (extension_loaded('gd')) {
@@ -42,10 +57,10 @@ class QRCodeService
         $builder = new Builder(
             writer: $writer,
             data: $data,
-            encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            encoding: new Encoding($encoding),
+            errorCorrectionLevel: $errorCorrectionLevel,
             size: $size,
-            margin: 10
+            margin: $margin
         );
 
         $result = $builder->build();
@@ -77,9 +92,24 @@ class QRCodeService
      * @param int $size
      * @return bool
      */
-    public function saveForKremation(Kremation $kremation, string $filepath, int $size = 300): bool
+    public function saveForKremation(Kremation $kremation, string $filepath, ?int $size = null): bool
     {
         $data = $this->buildQRData($kremation);
+
+        // Get configuration from .env or use defaults
+        $size = $size ?? (int) ($_ENV['QR_CODE_SIZE'] ?? 300);
+        $margin = (int) ($_ENV['QR_CODE_MARGIN'] ?? 10);
+        $encoding = $_ENV['QR_CODE_ENCODING'] ?? 'UTF-8';
+        $errorCorrection = $_ENV['QR_CODE_ERROR_CORRECTION'] ?? 'High';
+
+        // Map error correction string to enum
+        $errorCorrectionLevel = match(strtolower($errorCorrection)) {
+            'low' => ErrorCorrectionLevel::Low,
+            'medium' => ErrorCorrectionLevel::Medium,
+            'quartile' => ErrorCorrectionLevel::Quartile,
+            'high' => ErrorCorrectionLevel::High,
+            default => ErrorCorrectionLevel::High,
+        };
 
         // Check if GD extension is available for PNG generation
         if (extension_loaded('gd')) {
@@ -96,10 +126,10 @@ class QRCodeService
         $builder = new Builder(
             writer: $writer,
             data: $data,
-            encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            encoding: new Encoding($encoding),
+            errorCorrectionLevel: $errorCorrectionLevel,
             size: $size,
-            margin: 10
+            margin: $margin
         );
 
         $result = $builder->build();

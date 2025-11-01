@@ -20,7 +20,7 @@ class AuditService
      * @param User $user The user performing the action
      * @param string $action The action type
      * @param string $table The table name
-     * @param int $recordId The record ID
+     * @param int|string $recordId The record ID (int for most tables, string for kremation vorgangs_id)
      * @param array<string, mixed>|null $oldValue The old values (JSON)
      * @param array<string, mixed>|null $newValue The new values (JSON)
      * @param string|null $ipAddress The IP address
@@ -29,7 +29,7 @@ class AuditService
         User $user,
         string $action,
         string $table,
-        int $recordId,
+        int|string $recordId,
         ?array $oldValue = null,
         ?array $newValue = null,
         ?string $ipAddress = null
@@ -50,7 +50,7 @@ class AuditService
      * Get change history for a record
      * 
      * @param string $table The table name
-     * @param int $recordId The record ID
+     * @param int|string $recordId The record ID (int for most tables, string for kremation vorgangs_id)
      * @return \Illuminate\Support\Collection
      */
     public function getHistory(string $table, int $recordId)

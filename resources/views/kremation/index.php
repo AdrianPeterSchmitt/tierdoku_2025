@@ -92,7 +92,15 @@
                         >
                             <option value="">-</option>
                             <?php foreach ($standorte as $s): ?>
-                            <option value="<?= htmlspecialchars($s->name) ?>" <?= !$user->isAdmin() && $user->standort_id == $s->standort_id ? 'selected' : '' ?>>
+                            <?php
+                            // For non-admins: select default standort or first standort
+                            // For admins: no default selection
+                            $isSelected = false;
+                            if (!$user->isAdmin() && isset($defaultStandortId) && $defaultStandortId == $s->standort_id) {
+                                $isSelected = true;
+                            }
+                            ?>
+                            <option value="<?= htmlspecialchars($s->name) ?>" <?= $isSelected ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($s->name) ?>
                             </option>
                             <?php endforeach; ?>
@@ -105,13 +113,23 @@
                         <select 
                             name="Herkunft" 
                             x-model="herkunft"
+                            :disabled="!standort || loadingHerkunfte"
                             required
-                            class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white"
+                            class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="">-</option>
-                            <?php foreach ($herkuenfte as $h): ?>
-                            <option value="<?= htmlspecialchars($h->name) ?>"><?= htmlspecialchars($h->name) ?></option>
-                            <?php endforeach; ?>
+                            <template x-if="loadingHerkunfte">
+                                <option disabled>Lade Herkünfte...</option>
+                            </template>
+                            <template x-if="!loadingHerkunfte && !standort">
+                                <option disabled>Bitte wählen Sie zuerst einen Standort</option>
+                            </template>
+                            <template x-if="!loadingHerkunfte && standort && availableHerkunfte.length === 0">
+                                <option disabled>Keine Herkünfte für diesen Standort verfügbar</option>
+                            </template>
+                            <template x-for="herkunftItem in availableHerkunfte" :key="herkunftItem.herkunft_id">
+                                <option :value="herkunftItem.name" x-text="herkunftItem.name"></option>
+                            </template>
                         </select>
                     </div>
 
@@ -314,14 +332,14 @@
                             <td class="px-4 py-3 text-sm">
                                 <div class="flex gap-1">
                                     <button 
-                                        @click="loadKremationForEdit(<?= $k->vorgangs_id ?>)"
+                                        @click="loadKremationForEdit('<?= htmlspecialchars($k->vorgangs_id) ?>')"
                                         class="inline-block px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition text-xs"
                                     >
                                         ✏️ Bearbeiten
                                     </button>
                                     <?php if (!$k->einaescherungsdatum): ?>
                                     <button 
-                                        @click="completeKremation(<?= $k->vorgangs_id ?>)"
+                                        @click="completeKremation('<?= htmlspecialchars($k->vorgangs_id) ?>')"
                                         class="inline-block px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded transition text-xs"
                                         title="Kremation abschließen"
                                     >
@@ -374,8 +392,15 @@
 function kremationApp() {
     return {
         showFilters: false,
-        standort: localStorage.getItem('lastStandort') || '<?= !$user->isAdmin() ? htmlspecialchars($user->standort->name ?? '') : '' ?>',
+        standort: localStorage.getItem('lastStandort') || '<?php
+        if (!$user->isAdmin() && isset($defaultStandortId) && $defaultStandortId) {
+            $defaultStandort = $standorte->firstWhere('standort_id', $defaultStandortId);
+            echo $defaultStandort ? htmlspecialchars($defaultStandort->name) : '';
+        }
+        ?>',
         herkunft: localStorage.getItem('lastHerkunft') || '',
+        availableHerkunfte: [],
+        loadingHerkunfte: false,
         tierCounts: {
             'Vogel': 0,
             'Heimtier': 0,
@@ -400,12 +425,24 @@ function kremationApp() {
             
             // Save standort/herkunft to localStorage on change
             this.$watch('standort', value => {
-                if (value) localStorage.setItem('lastStandort', value);
+                if (value) {
+                    localStorage.setItem('lastStandort', value);
+                    // Load herkunfte for selected standort
+                    this.loadHerkunfteForStandort(value);
+                } else {
+                    this.availableHerkunfte = [];
+                    this.herkunft = '';
+                }
             });
             
             this.$watch('herkunft', value => {
                 if (value) localStorage.setItem('lastHerkunft', value);
             });
+            
+            // Load initial herkunfte if standort is set
+            if (this.standort) {
+                this.loadHerkunfteForStandort(this.standort);
+            }
             
             // Handle form submission
             const form = document.getElementById('kremation-form');
@@ -500,6 +537,44 @@ function kremationApp() {
             this.tierCounts[tierart] = Math.max(0, Math.min(99, newValue));
         },
         
+        async loadHerkunfteForStandort(standortName) {
+            if (!standortName) {
+                this.availableHerkunfte = [];
+                this.herkunft = '';
+                return;
+            }
+            
+            this.loadingHerkunfte = true;
+            this.availableHerkunfte = [];
+            this.herkunft = ''; // Reset herkunft when standort changes
+            
+            try {
+                // URL encode the standort name for the API call
+                const encodedStandortName = encodeURIComponent(standortName);
+                const response = await fetch(`/api/herkunft/by-standort/${encodedStandortName}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && Array.isArray(data.herkunfte)) {
+                    this.availableHerkunfte = data.herkunfte;
+                } else {
+                    console.error('Unexpected API response:', data);
+                    this.availableHerkunfte = [];
+                }
+            } catch (error) {
+                console.error('Error loading herkunfte:', error);
+                this.message = 'Fehler beim Laden der Herkünfte: ' + error.message;
+                this.messageType = 'error';
+                this.availableHerkunfte = [];
+            } finally {
+                this.loadingHerkunfte = false;
+            }
+        },
+        
         totalAnimals() {
             return Object.values(this.tierCounts).reduce((sum, count) => sum + (count || 0), 0);
         },
@@ -535,8 +610,18 @@ function kremationApp() {
                 // Populate form
                 const form = document.getElementById('kremation-form');
                 form.querySelector('input[name="Eingangsdatum"]').value = eingangsdatumFormatted;
+                
+                // Set standort first (this will trigger loading of herkunfte)
+                this.standort = standort;
                 form.querySelector('select[name="Standort"]').value = standort;
+                
+                // Wait for herkunfte to load before setting herkunft value
+                await this.loadHerkunfteForStandort(standort);
+                
+                // Set herkunft after herkunfte are loaded
+                this.herkunft = herkunft;
                 form.querySelector('select[name="Herkunft"]').value = herkunft;
+                
                 form.querySelector('input[name="Gewicht"]').value = gewicht.replace('.', ',');
                 
                 // Set tier counts
@@ -587,10 +672,6 @@ function kremationApp() {
                 // Stop polling while editing
                 this.stopPolling();
                 
-                // Update Alpine.js models
-                this.standort = standort;
-                this.herkunft = herkunft;
-                
                 // Scroll to form
                 document.querySelector('#kremation-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (error) {
@@ -620,8 +701,20 @@ function kremationApp() {
             };
             
             // Reset Alpine.js models
-            this.standort = localStorage.getItem('lastStandort') || '<?= !$user->isAdmin() ? htmlspecialchars($user->standort->name ?? '') : '' ?>';
+            this.standort = localStorage.getItem('lastStandort') || '<?php
+            if (!$user->isAdmin() && isset($defaultStandortId) && $defaultStandortId) {
+                $defaultStandort = $standorte->firstWhere('standort_id', $defaultStandortId);
+                echo $defaultStandort ? htmlspecialchars($defaultStandort->name) : '';
+            }
+            ?>';
             this.herkunft = localStorage.getItem('lastHerkunft') || '';
+            
+            // Reload herkunfte if standort is set
+            if (this.standort) {
+                this.loadHerkunfteForStandort(this.standort);
+            } else {
+                this.availableHerkunfte = [];
+            }
             
             // Set default date
             const today = new Date().toISOString().split('T')[0];
@@ -736,7 +829,7 @@ function kremationApp() {
             
             const existingIds = new Set(
                 Array.from(tbody.querySelectorAll('tr[data-vorgang-id]'))
-                    .map(row => parseInt(row.getAttribute('data-vorgang-id')))
+                    .map(row => row.getAttribute('data-vorgang-id'))
             );
             
             let newCount = 0;

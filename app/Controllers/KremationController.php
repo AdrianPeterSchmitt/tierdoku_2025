@@ -67,10 +67,11 @@ class KremationController
         // Build query
         $query = Kremation::with(['standort', 'herkunft', 'creator', 'tierarten']);
 
-        // Apply standort filter (non-admins see only their standort)
-        if (!$user->isAdmin()) {
-            $query->forStandort($user->standort_id);
-        } elseif (!empty($_GET['standort'])) {
+        // Apply standort filter using scope
+        $query->forAllowedStandorte($user);
+        
+        // Admin can also filter by specific standort
+        if ($user->isAdmin() && !empty($_GET['standort'])) {
             $query->forStandort((int) $_GET['standort']);
         }
 
@@ -102,9 +103,18 @@ class KremationController
         $hasMore = ($offset + count($kremations)) < $total;
 
         // Get form data
-        $nextNr = Kremation::nextVorgangsNummer($user->standort_id);
-        $herkuenfte = Herkunft::all();
-        $standorte = Standort::aktiv()->get();
+        // For nextVorgangsNummer, use default standort or first allowed standort
+        $defaultStandortId = $user->getDefaultStandortId();
+        $nextNr = $defaultStandortId ? Kremation::nextVorgangsNummer($defaultStandortId) : '';
+        
+        // Get standorte for form: filtered for non-admins
+        if ($user->isAdmin()) {
+            $standorte = Standort::aktiv()->get();
+        } else {
+            $standorte = $user->standorte()->where('aktiv', true)->get();
+        }
+        
+        // Herkünfte werden jetzt dynamisch via API geladen, nicht mehr initial
         $tierarten = Tierart::all();
 
         return view('kremation/index', [
@@ -112,10 +122,10 @@ class KremationController
             'nextNr' => $nextNr,
             'currentPage' => $page,
             'hasMore' => $hasMore,
-            'herkuenfte' => $herkuenfte,
             'standorte' => $standorte,
             'tierarten' => $tierarten,
             'user' => $user,
+            'defaultStandortId' => $defaultStandortId,
             'search' => $search,
             'herkunftFilter' => $herkunftFilter,
             'statusFilter' => $statusFilter,
@@ -151,10 +161,8 @@ class KremationController
             // Build query - same as index but filter by updated_at
             $query = Kremation::with(['standort', 'herkunft', 'creator', 'tierarten']);
 
-            // Apply standort filter (non-admins see only their standort)
-            if (!$user->isAdmin()) {
-                $query->forStandort($user->standort_id);
-            }
+            // Apply standort filter using scope
+            $query->forAllowedStandorte($user);
 
             // Filter by updated_at or created_at if since is provided
             if ($sinceTimestamp) {
@@ -272,9 +280,9 @@ class KremationController
         header('Content-Type: application/json');
 
         try {
-            $vorgang = (int) ($vars['id'] ?? 0);
+            $vorgang = (string) ($vars['id'] ?? '');
 
-            if ($vorgang <= 0) {
+            if (empty($vorgang)) {
                 throw new InvalidArgumentException('Invalid vorgangs_id');
             }
 
@@ -332,11 +340,11 @@ class KremationController
                 throw new InvalidArgumentException('Invalid JSON');
             }
 
-            $vorgang = (int) ($data['vorgang'] ?? 0);
+            $vorgang = (string) ($data['vorgang'] ?? '');
             $field = $data['field'] ?? '';
             $value = $data['value'] ?? null;
 
-            if ($vorgang <= 0 || empty($field)) {
+            if (empty($vorgang) || empty($field)) {
                 throw new InvalidArgumentException('Invalid parameters');
             }
 
@@ -380,9 +388,9 @@ class KremationController
                 throw new InvalidArgumentException('Invalid JSON');
             }
 
-            $vorgang = (int) ($data['vorgang'] ?? 0);
+            $vorgang = (string) ($data['vorgang'] ?? '');
 
-            if ($vorgang <= 0) {
+            if (empty($vorgang)) {
                 throw new InvalidArgumentException('Invalid vorgangs_id');
             }
 
@@ -427,9 +435,9 @@ class KremationController
                 throw new InvalidArgumentException('Invalid JSON');
             }
 
-            $vorgang = (int) ($data['vorgang'] ?? 0);
+            $vorgang = (string) ($data['vorgang'] ?? '');
 
-            if ($vorgang <= 0) {
+            if (empty($vorgang)) {
                 throw new InvalidArgumentException('Invalid vorgangs_id');
             }
 
@@ -473,9 +481,9 @@ class KremationController
         header('Content-Type: application/json');
 
         try {
-            $vorgang = (int) ($vars['id'] ?? 0);
+            $vorgang = (string) ($vars['id'] ?? '');
 
-            if ($vorgang <= 0) {
+            if (empty($vorgang)) {
                 throw new InvalidArgumentException('Invalid vorgangs_id');
             }
 
@@ -528,9 +536,9 @@ class KremationController
     {
         try {
             $user = $this->getCurrentUser();
-            $vorgangsId = (int) ($vars['id'] ?? 0);
+            $vorgangsId = (string) ($vars['id'] ?? '');
 
-            if ($vorgangsId <= 0) {
+            if (empty($vorgangsId)) {
                 http_response_code(400);
                 return view('errors/404', ['message' => 'Ungültige Vorgangs-ID']);
             }
@@ -543,7 +551,7 @@ class KremationController
             }
 
             // Check permissions
-            if (!$user->isAdmin() && $kremation->standort_id !== $user->standort_id) {
+            if (!$user->isAdmin() && !$user->hasStandort($kremation->standort_id)) {
                 http_response_code(403);
                 return view('errors/403', ['message' => 'Keine Berechtigung']);
             }

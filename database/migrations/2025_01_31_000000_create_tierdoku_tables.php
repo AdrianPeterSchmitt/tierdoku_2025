@@ -52,7 +52,7 @@ return function ($schema) {
 
     // Kremation
     $schema->create('kremation', function ($table) {
-        $table->id('vorgangs_id');
+        $table->string('vorgangs_id', 20)->primary(); // String primary key with standort prefix format
         $table->date('eingangsdatum');
         $table->decimal('gewicht', 8, 2);
         $table->timestamp('einaescherungsdatum')->nullable();
@@ -65,10 +65,11 @@ return function ($schema) {
 
     // Kremation_Tiere (Pivot Table)
     $schema->create('kremation_tiere', function ($table) {
-        $table->foreignId('kremation_id')->constrained('kremation', 'vorgangs_id')->onDelete('cascade');
+        $table->string('kremation_id', 20); // String foreign key to match vorgangs_id
         $table->foreignId('tierart_id')->constrained('tierart', 'tierart_id')->onDelete('cascade');
         $table->integer('anzahl')->default(0);
         $table->primary(['kremation_id', 'tierart_id']);
+        $table->foreign('kremation_id')->references('vorgangs_id')->on('kremation')->onDelete('cascade');
     });
 
     // Audit Log
@@ -77,7 +78,7 @@ return function ($schema) {
         $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
         $table->enum('action', ['created', 'updated', 'deleted', 'restored', 'completed', 'bulk_deleted', 'bulk_completed']);
         $table->string('table_name');
-        $table->unsignedBigInteger('record_id');
+        $table->string('record_id', 50); // String to support both integer IDs and string IDs (like vorgangs_id)
         $table->json('old_value')->nullable();
         $table->json('new_value')->nullable();
         $table->string('ip_address')->nullable();

@@ -25,16 +25,21 @@ class PDFLabelService
     {
         $html = $this->buildLabelHTML($kremation);
 
+        // Get configuration from .env or use defaults
+        $paperSize = $_ENV['PDF_PAPER_SIZE'] ?? 'a4';
+        $paperOrientation = $_ENV['PDF_PAPER_ORIENTATION'] ?? 'portrait';
+        $fontFamily = 'DejaVu Sans'; // Keep default font
+
         $options = new Options();
-        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('defaultFont', $fontFamily);
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('defaultPaperSize', 'a4');
-        $options->set('defaultPaperOrientation', 'portrait');
+        $options->set('defaultPaperSize', $paperSize);
+        $options->set('defaultPaperOrientation', $paperOrientation);
 
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('a4', 'portrait');
+        $dompdf->setPaper($paperSize, $paperOrientation);
         $dompdf->render();
 
         return $dompdf->output();
@@ -52,6 +57,13 @@ class PDFLabelService
         $herkunft = $kremation->herkunft->name ?? 'Unbekannt';
         $eingangsdatum = $kremation->eingangsdatum?->format('d.m.Y') ?? 'N/A';
         $gewicht = number_format($kremation->gewicht, 2, ',', '.');
+        
+        // Get PDF configuration from .env or use defaults
+        $labelBorderWidth = $_ENV['PDF_LABEL_BORDER_WIDTH'] ?? '3px';
+        $fontSizeHeader = $_ENV['PDF_FONT_SIZE_HEADER'] ?? '36pt';
+        $fontSizeBase = $_ENV['PDF_FONT_SIZE_BASE'] ?? '14pt';
+        $qrCodeSizeMm = $_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60';
+        $qrCodePaddingMm = $_ENV['PDF_QR_CODE_PADDING_MM'] ?? '5';
         
         // Get tier counts
         $tierCounts = [];
@@ -95,7 +107,7 @@ class PDFLabelService
                 
                 .label {
                     width: 100%;
-                    border: 3px solid #000;
+                    border: " . htmlspecialchars($labelBorderWidth) . " solid #000;
                     padding: 15mm;
                     page-break-after: always;
                 }
@@ -112,7 +124,7 @@ class PDFLabelService
                 }
                 
                 .header h1 {
-                    font-size: 36pt;
+                    font-size: " . htmlspecialchars($fontSizeHeader) . ";
                     font-weight: bold;
                     margin-bottom: 5mm;
                 }
@@ -135,7 +147,7 @@ class PDFLabelService
                 .label-cell, .value-cell {
                     display: table-cell;
                     padding: 3mm 0;
-                    font-size: 14pt;
+                    font-size: " . htmlspecialchars($fontSizeBase) . ";
                     vertical-align: top;
                 }
                 
@@ -167,8 +179,8 @@ class PDFLabelService
                 }
                 
                 .qr-code img {
-                    width: 80mm;
-                    height: 80mm;
+                    width: " . htmlspecialchars($qrCodeSizeMm) . "mm;
+                    height: " . htmlspecialchars($qrCodeSizeMm) . "mm;
                 }
             </style>
         </head>
@@ -208,9 +220,9 @@ class PDFLabelService
                 
                 <div class='qr-code'>
                     <p style='font-size: 10pt; margin-bottom: 3mm;'>QR-Code:</p>
-                    <div style='display: inline-block; padding: 5mm; background: #fff; border: 2px solid #000;'>
+                    <div style='display: inline-block; padding: " . htmlspecialchars($qrCodePaddingMm) . "mm; background: #fff; border: 2px solid #000;'>
                         <!-- QR Code placeholder - actual QR code would be embedded as base64 image -->
-                        <div style='width: 60mm; height: 60mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;'>
+                        <div style='width: " . htmlspecialchars($qrCodeSizeMm) . "mm; height: " . htmlspecialchars($qrCodeSizeMm) . "mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;'>
                             Scannen Sie den QR-Code
                             <br>für Details
                         </div>
@@ -238,27 +250,35 @@ class PDFLabelService
     {
         $html = $this->buildLabelHTML($kremation);
 
+        // Get QR code size from .env or use default
+        $qrCodeSizeMm = $_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60';
+
         // Replace QR placeholder with actual QR code
         $mimeType = $qrMimeType !== '' ? $qrMimeType : 'image/png';
         $html = str_replace(
-            '<div style=\'width: 60mm; height: 60mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;\'>
+            '<div style=\'width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;\'>
                             Scannen Sie den QR-Code
                             <br>für Details
                         </div>',
-            '<img src="data:' . htmlspecialchars($mimeType) . ';base64,' . $qrCodeBase64 . '" style="width: 60mm; height: 60mm;">',
+            '<img src="data:' . htmlspecialchars($mimeType) . ';base64,' . $qrCodeBase64 . '" style="width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm;">',
             $html
         );
 
+        // Get configuration from .env or use defaults
+        $paperSize = $_ENV['PDF_PAPER_SIZE'] ?? 'a4';
+        $paperOrientation = $_ENV['PDF_PAPER_ORIENTATION'] ?? 'portrait';
+        $fontFamily = 'DejaVu Sans'; // Keep default font
+
         $options = new Options();
-        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('defaultFont', $fontFamily);
         $options->set('isRemoteEnabled', true);
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('defaultPaperSize', 'a4');
-        $options->set('defaultPaperOrientation', 'portrait');
+        $options->set('defaultPaperSize', $paperSize);
+        $options->set('defaultPaperOrientation', $paperOrientation);
 
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('a4', 'portrait');
+        $dompdf->setPaper($paperSize, $paperOrientation);
         $dompdf->render();
 
         return $dompdf->output();

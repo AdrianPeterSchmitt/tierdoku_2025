@@ -109,8 +109,10 @@ switch ($routeInfo[0]) {
             || str_starts_with($uri, '/kremation/') 
             || str_starts_with($uri, '/herkunft/') 
             || str_starts_with($uri, '/standort/')
-            || str_starts_with($uri, '/users/') 
-            || str_starts_with($uri, '/notifications/');
+            || str_starts_with($uri, '/users/')
+            || str_starts_with($uri, '/config')
+            || str_starts_with($uri, '/notifications/')
+            || str_starts_with($uri, '/api/');
         
         // Check authentication for protected routes
         if ($isProtectedRoute) {
