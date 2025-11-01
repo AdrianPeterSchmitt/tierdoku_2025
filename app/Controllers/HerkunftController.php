@@ -55,6 +55,41 @@ class HerkunftController
         ]);
     }
 
+    /**
+     * Get herkunft data for editing
+     * 
+     * @param array<string, mixed> $vars
+     * @return string
+     */
+    public function edit(array $vars): string
+    {
+        /** @var User $user */
+        $user = $_REQUEST['_user'] ?? null;
+        header('Content-Type: application/json');
+
+        if (!$user || (!$user->isAdmin() && !$user->isManager())) {
+            http_response_code(403);
+            return (string) json_encode(['success' => false, 'error' => 'Keine Berechtigung']);
+        }
+
+        $id = (int) ($vars['id'] ?? 0);
+        $herkunft = Herkunft::with('standort')->find($id);
+
+        if (!$herkunft) {
+            http_response_code(404);
+            return (string) json_encode(['success' => false, 'error' => 'Herkunft nicht gefunden']);
+        }
+
+        return (string) json_encode([
+            'success' => true,
+            'herkunft' => [
+                'herkunft_id' => $herkunft->herkunft_id,
+                'name' => $herkunft->name,
+                'standort_id' => $herkunft->standort_id,
+            ],
+        ]);
+    }
+
     public function store(): string
     {
         /** @var User $user */
@@ -93,7 +128,13 @@ class HerkunftController
         return (string) json_encode(['success' => true, 'id' => $h->herkunft_id]);
     }
 
-    public function update(int $id): string
+    /**
+     * Update a herkunft
+     * 
+     * @param array<string, mixed> $vars
+     * @return string
+     */
+    public function update(array $vars): string
     {
         /** @var User $user */
         $user = $_REQUEST['_user'] ?? null;
@@ -102,6 +143,7 @@ class HerkunftController
             return (string) json_encode(['success' => false, 'error' => 'Keine Berechtigung']);
         }
 
+        $id = (int) ($vars['id'] ?? 0);
         $h = Herkunft::find($id);
         if (!$h) {
             http_response_code(404);
@@ -127,7 +169,13 @@ class HerkunftController
         return (string) json_encode(['success' => true]);
     }
 
-    public function delete(int $id): string
+    /**
+     * Delete a herkunft
+     * 
+     * @param array<string, mixed> $vars
+     * @return string
+     */
+    public function delete(array $vars): string
     {
         /** @var User $user */
         $user = $_REQUEST['_user'] ?? null;
@@ -136,6 +184,7 @@ class HerkunftController
             return (string) json_encode(['success' => false, 'error' => 'Keine Berechtigung']);
         }
 
+        $id = (int) ($vars['id'] ?? 0);
         $h = Herkunft::find($id);
         if (!$h) {
             http_response_code(404);

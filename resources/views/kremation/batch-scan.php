@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch QR-Scan - Dokumentation der anonymen Tiere</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -15,8 +16,11 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen px-4 py-8">
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen">
 
+<?php require $GLOBALS['viewBasePath'] . 'partials/nav.php'; ?>
+
+<div class="w-full px-4 py-8">
 <div class="max-w-4xl mx-auto">
     <!-- Header -->
     <div class="mb-6">
@@ -36,24 +40,16 @@
         </button>
     </div>
 
-    <!-- Batch-Optionen -->
-    <div id="batch-options" class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-6 mb-6">
-        <h3 class="text-lg font-bold mb-4">Aktion nach Scan:</h3>
-        <div class="space-y-3">
-            <label class="flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg hover:bg-gray-900/70 cursor-pointer transition">
-                <input type="radio" name="batch-action" value="view" checked class="w-5 h-5 text-blue-500">
-                <div>
-                    <span class="font-semibold block">Nur anzeigen</span>
-                    <span class="text-sm text-gray-400">Sammeln Sie Kremationen zur Ansicht</span>
-                </div>
-            </label>
-            <label class="flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg hover:bg-gray-900/70 cursor-pointer transition">
-                <input type="radio" name="batch-action" value="complete" class="w-5 h-5 text-blue-500">
-                <div>
-                    <span class="font-semibold block text-green-400">Automatisch abschließen</span>
-                    <span class="text-sm text-gray-400">Alle Kremationen mit einem Klick abschließen</span>
-                </div>
-            </label>
+    <!-- Info -->
+    <div class="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur border border-blue-500/50 rounded-2xl p-6 mb-6">
+        <h3 class="text-lg font-bold mb-2 text-blue-400">📦 Batch-Modus</h3>
+        <p class="text-sm text-gray-300 mb-3">
+            Scannen Sie mehrere Beutel-Etiketten nacheinander. Alle gescannten Kremationen werden in der Liste gesammelt und können zusammen abgeschlossen werden.
+        </p>
+        <div class="flex items-center gap-2 text-sm text-gray-400">
+            <span>✅ Duplikate werden automatisch erkannt</span>
+            <span>✅ Scanner läuft kontinuierlich weiter</span>
+            <span>✅ Liste kann jederzeit geleert werden</span>
         </div>
     </div>
 
@@ -362,20 +358,24 @@ document.getElementById('clear-list').addEventListener('click', () => {
 document.getElementById('process-all').addEventListener('click', processAllKremations);
 
 function processAllKremations() {
-    const action = document.querySelector('input[name="batch-action"]:checked').value;
-    
-    if (action === 'view') {
-        alert('Alle Kremationen wurden angezeigt. Keine weitere Aktion erforderlich.');
+    if (scannedKremations.length === 0) {
+        alert('Keine Kremationen zum Abschließen vorhanden.');
         return;
     }
     
-    if (action === 'complete') {
-        if (!confirm(`${scannedKremations.length} Kremationen abschließen?\n\nAlle Kremationen erhalten das aktuelle Datum und Uhrzeit als Einäscherungsdatum.`)) {
-            return;
-        }
-        
-        completeAllKremations();
+    // Zähle nur offene Kremationen
+    const openCount = scannedKremations.filter(k => !k.is_completed).length;
+    
+    if (openCount === 0) {
+        alert('Alle Kremationen sind bereits abgeschlossen.');
+        return;
     }
+    
+    if (!confirm(`${openCount} Kremation${openCount > 1 ? 'en' : ''} abschließen?\n\nAlle Kremationen erhalten das aktuelle Datum und Uhrzeit als Einäscherungsdatum.`)) {
+        return;
+    }
+    
+    completeAllKremations();
 }
 
 async function completeAllKremations() {
@@ -448,6 +448,13 @@ function updateStatus(message, className) {
 // Init
 document.addEventListener('DOMContentLoaded', initScanner);
 </script>
+
+</div>
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
 
 </body>
 </html>

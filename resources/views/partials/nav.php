@@ -16,22 +16,22 @@
     <!-- Mobile Menu -->
     <div x-show="open" x-cloak class="border-t border-gray-800 bg-gray-900/95 text-white">
         <nav class="w-full px-4 py-3 grid gap-2">
-            <a href="/kremation" class="px-3 py-2 rounded-lg hover:bg-gray-800">Kremationen</a>
-            <a href="/statistics" class="px-3 py-2 rounded-lg hover:bg-gray-800">Statistiken</a>
-            <a href="/kremation/scan" class="px-3 py-2 rounded-lg hover:bg-gray-800">QR-Scanner</a>
-            <a href="/kremation/batch-scan" class="px-3 py-2 rounded-lg hover:bg-gray-800">📦 Batch-Scan</a>
+            <a href="/kremation" class="px-3 py-2 rounded-lg hover:bg-gray-800">🔥 Kremationen</a>
+            <a href="/statistics" class="px-3 py-2 rounded-lg hover:bg-gray-800">📊 Statistiken</a>
+            <a href="/kremation/scan" class="px-3 py-2 rounded-lg hover:bg-gray-800 bg-green-900/20 border border-green-500/30">📷 QR-Scanner (Schnell)</a>
+            <a href="/kremation/batch-scan" class="px-3 py-2 rounded-lg hover:bg-gray-800">📦 Batch-Scan (Mehrere)</a>
             <?php if ($user && $user->isAdmin()): ?>
-            <a href="/users" class="px-3 py-2 rounded-lg hover:bg-gray-800">Benutzer</a>
+            <a href="/users" class="px-3 py-2 rounded-lg hover:bg-gray-800">👥 Benutzer</a>
             <?php endif; ?>
             <?php if ($user && ($user->isAdmin() || $user->isManager())): ?>
-            <a href="/herkunft" class="px-3 py-2 rounded-lg hover:bg-gray-800">Herkünfte</a>
-            <a href="/standort" class="px-3 py-2 rounded-lg hover:bg-gray-800">Standorte</a>
+            <a href="/herkunft" class="px-3 py-2 rounded-lg hover:bg-gray-800">🏢 Herkünfte</a>
+            <a href="/standort" class="px-3 py-2 rounded-lg hover:bg-gray-800">📍 Standorte</a>
             <?php endif; ?>
             <?php if ($user): ?>
             <div class="px-3 py-2 text-gray-300">👤 <?= htmlspecialchars($user->username) ?></div>
-            <a href="/logout" class="px-3 py-2 rounded-lg hover:bg-gray-800">Logout</a>
+            <a href="/logout" class="px-3 py-2 rounded-lg hover:bg-gray-800">🚪 Logout</a>
             <?php else: ?>
-            <a href="/login" class="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white">Login</a>
+            <a href="/login" class="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white">🔐 Login</a>
             <?php endif; ?>
         </nav>
     </div>

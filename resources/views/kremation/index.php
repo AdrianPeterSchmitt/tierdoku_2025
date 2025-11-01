@@ -23,6 +23,11 @@
             filter: invert(1);
             cursor: pointer;
         }
+        
+        /* Time input 24-hour format styling */
+        input[type="time"] {
+            font-variant-numeric: tabular-nums;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen">
@@ -54,26 +59,18 @@
         
         <!-- Erfassungs-Formular -->
         <section class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-6 shadow-2xl">
-            <div class="flex items-center justify-between mb-6">
+            <div class="mb-6">
                 <h2 class="text-xl font-bold flex items-center gap-2">
                     <span x-show="!isEditMode">📝 Neue Kremation erfassen</span>
                     <span x-show="isEditMode">✏️ Kremation bearbeiten</span>
                 </h2>
-                <button 
-                    type="button"
-                    x-show="isEditMode"
-                    @click="resetForm()"
-                    class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition text-sm"
-                >
-                    Abbrechen
-                </button>
             </div>
             
             <form method="post" action="/kremation" class="space-y-6" id="kremation-form">
                 <input type="hidden" name="vorgangs_id" x-model="editingKremationId">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- Eingangsdatum -->
-                    <div class="lg:col-span-1">
+                    <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Eingangsdatum *</label>
                         <input 
                             type="date" 
@@ -85,7 +82,7 @@
                     </div>
 
                     <!-- Standort -->
-                    <div class="lg:col-span-1">
+                    <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Standort *</label>
                         <select 
                             name="Standort" 
@@ -103,7 +100,7 @@
                     </div>
 
                     <!-- Herkunft -->
-                    <div class="lg:col-span-2 xl:col-span-1">
+                    <div class="md:col-span-2 lg:col-span-2">
                         <label class="block text-sm font-medium text-gray-300 mb-2">Herkunft *</label>
                         <select 
                             name="Herkunft" 
@@ -159,34 +156,74 @@
                             class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white"
                         >
                     </div>
-
-                    <!-- Einäscherungsdatum (nur im Edit-Modus) -->
-                    <div x-show="isEditMode" class="lg:col-span-1">
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Kremation (Datum & Uhrzeit)</label>
-                        <input 
-                            type="datetime-local" 
-                            name="Einaescherungsdatum" 
-                            class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white"
-                        >
+                </div>
+                
+                <!-- Gesamtzahl Anzeige -->
+                <div class="text-sm text-gray-400 mt-2 mb-4">
+                    Gesamt: <span class="font-bold" x-text="totalAnimals()"></span> Tier(e)
+                </div>
+                
+                <!-- Einäscherungsdatum (nur im Edit-Modus) - Außerhalb des Grids für besseres Layout -->
+                <div x-show="isEditMode" class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Kremation (Datum & Uhrzeit)</label>
+                    <div class="flex flex-col sm:flex-row gap-3 max-w-2xl">
+                        <div class="flex-1">
+                            <input 
+                                type="date"
+                                id="einaescherungsdatum-date"
+                                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white"
+                            >
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input 
+                                type="number"
+                                id="einaescherungsdatum-hour"
+                                min="0"
+                                max="23"
+                                placeholder="HH"
+                                class="w-16 sm:w-20 px-2 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white text-center font-mono text-lg"
+                                oninput="updateTimeFromInputs()"
+                                style="min-width: 64px;"
+                            >
+                            <span class="text-gray-400 font-bold text-xl">:</span>
+                            <input 
+                                type="number"
+                                id="einaescherungsdatum-minute"
+                                min="0"
+                                max="59"
+                                placeholder="MM"
+                                class="w-16 sm:w-20 px-2 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white text-center font-mono text-lg"
+                                oninput="updateTimeFromInputs()"
+                                style="min-width: 64px;"
+                            >
+                        </div>
                     </div>
-
-                    <!-- Submit Button -->
-                    <div class="flex items-end">
-                        <button 
-                            type="submit"
-                            :disabled="saving"
-                            class="w-full px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <span x-show="!saving && !isEditMode">Speichern</span>
-                            <span x-show="!saving && isEditMode">Aktualisieren</span>
-                            <span x-show="saving">Wird gespeichert...</span>
-                        </button>
-                    </div>
+                    <input 
+                        type="hidden"
+                        name="Einaescherungsdatum" 
+                        id="einaescherungsdatum-hidden"
+                    >
                 </div>
 
-                <!-- Gesamtzahl Anzeige -->
-                <div class="text-sm text-gray-400">
-                    Gesamt: <span class="font-bold" x-text="totalAnimals()"></span> Tier(e)
+                <!-- Submit Button - Am Ende des Formulars -->
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-700/50">
+                    <button 
+                        type="button"
+                        x-show="isEditMode"
+                        @click="resetForm()"
+                        class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition shadow disabled:opacity-50 disabled:cursor-not-allowed w-[150px]"
+                    >
+                        Abbrechen
+                    </button>
+                    <button 
+                        type="submit"
+                        :disabled="saving"
+                        class="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed w-[150px]"
+                    >
+                        <span x-show="!saving && !isEditMode">Speichern</span>
+                        <span x-show="!saving && isEditMode">Aktualisieren</span>
+                        <span x-show="saving">Wird gespeichert...</span>
+                    </button>
                 </div>
                 
                 <!-- Success/Error Message -->
@@ -357,6 +394,10 @@ function kremationApp() {
         newUpdatesCount: 0,
         
         init() {
+            // Ensure edit mode is reset on page load
+            this.isEditMode = false;
+            this.editingKremationId = null;
+            
             // Save standort/herkunft to localStorage on change
             this.$watch('standort', value => {
                 if (value) localStorage.setItem('lastStandort', value);
@@ -406,6 +447,9 @@ function kremationApp() {
                         input.value = this.tierCounts[tierart] || 0;
                     }
                 });
+                
+                // Aktualisiere verstecktes Feld für FormData
+                updateTimeFromInputs();
                 
                 const formData = new FormData(form);
                 
@@ -503,26 +547,42 @@ function kremationApp() {
                     'Hund': hund
                 };
                 
-                // Set Einäscherungsdatum if available
-                if (kremation !== '-' && kremation) {
-                    // Parse format: dd.mm.yyyy HH:mm Uhr -> yyyy-mm-ddTHH:mm
-                    const kremationMatch = kremation.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/);
-                    if (kremationMatch) {
-                        const [, day, month, year, hour, minute] = kremationMatch;
-                        const kremationFormatted = `${year}-${month}-${day}T${hour}:${minute}`;
-                        form.querySelector('input[name="Einaescherungsdatum"]').value = kremationFormatted;
-                    }
-                } else {
-                    // Clear Einäscherungsdatum if not set
-                    const kremationInput = form.querySelector('input[name="Einaescherungsdatum"]');
-                    if (kremationInput) {
-                        kremationInput.value = '';
+                // Set Einäscherungsdatum if available (Date + Hour/Minute Inputs)
+                const dateInput = document.getElementById('einaescherungsdatum-date');
+                const hourInput = document.getElementById('einaescherungsdatum-hour');
+                const minuteInput = document.getElementById('einaescherungsdatum-minute');
+                const hiddenInput = document.getElementById('einaescherungsdatum-hidden');
+                
+                if (dateInput && hourInput && minuteInput && hiddenInput) {
+                    if (kremation !== '-' && kremation) {
+                        // Parse format: dd.mm.yyyy HH:mm Uhr -> yyyy-mm-dd, HH und mm
+                        const kremationMatch = kremation.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/);
+                        if (kremationMatch) {
+                            const [, day, month, year, hour, minute] = kremationMatch;
+                            
+                            // Setze Date und Time separat
+                            dateInput.value = `${year}-${month}-${day}`;
+                            hourInput.value = hour.padStart(2, '0');
+                            minuteInput.value = minute.padStart(2, '0');
+                            hiddenInput.value = `${year}-${month}-${day}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+                        }
+                    } else {
+                        // Clear Einäscherungsdatum if not set
+                        dateInput.value = '';
+                        hourInput.value = '';
+                        minuteInput.value = '';
+                        hiddenInput.value = '';
                     }
                 }
                 
                 // Set edit mode
                 this.isEditMode = true;
                 this.editingKremationId = id;
+                
+                // Initialisiere nach kurzer Verzögerung
+                setTimeout(() => {
+                    updateTimeFromInputs();
+                }, 100);
                 
                 // Stop polling while editing
                 this.stopPolling();
@@ -567,11 +627,16 @@ function kremationApp() {
             const today = new Date().toISOString().split('T')[0];
             form.querySelector('input[name="Eingangsdatum"]').value = today;
             
-            // Clear Einäscherungsdatum
-            const kremationInput = form.querySelector('input[name="Einaescherungsdatum"]');
-            if (kremationInput) {
-                kremationInput.value = '';
-            }
+            // Clear Einäscherungsdatum (Date + Hour/Minute Inputs)
+            const dateInput = document.getElementById('einaescherungsdatum-date');
+            const hourInput = document.getElementById('einaescherungsdatum-hour');
+            const minuteInput = document.getElementById('einaescherungsdatum-minute');
+            const hiddenInput = document.getElementById('einaescherungsdatum-hidden');
+            
+            if (dateInput) dateInput.value = '';
+            if (hourInput) hourInput.value = '';
+            if (minuteInput) minuteInput.value = '';
+            if (hiddenInput) hiddenInput.value = '';
             
             // Clear message
             this.message = '';
@@ -941,6 +1006,95 @@ function kremationApp() {
         }
     }
 }
+
+// Moderne DateTime-Picker-Lösung: Date + separate Hour/Minute Inputs (24-Stunden-Format garantiert)
+function updateTimeFromInputs() {
+    const dateInput = document.getElementById('einaescherungsdatum-date');
+    const hourInput = document.getElementById('einaescherungsdatum-hour');
+    const minuteInput = document.getElementById('einaescherungsdatum-minute');
+    const hiddenInput = document.getElementById('einaescherungsdatum-hidden');
+    
+    if (dateInput && hourInput && minuteInput && hiddenInput) {
+        const date = dateInput.value;
+        let hour = parseInt(hourInput.value) || 0;
+        let minute = parseInt(minuteInput.value) || 0;
+        
+        // Stelle sicher, dass Werte im gültigen Bereich sind
+        if (hour < 0) hour = 0;
+        if (hour > 23) hour = 23;
+        if (minute < 0) minute = 0;
+        if (minute > 59) minute = 59;
+        
+        // Aktualisiere Input-Werte falls sie außerhalb des Bereichs waren
+        hourInput.value = hour.toString().padStart(2, '0');
+        minuteInput.value = minute.toString().padStart(2, '0');
+        
+        if (date) {
+            const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            hiddenInput.value = `${date}T${time}`;
+        } else {
+            hiddenInput.value = '';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('einaescherungsdatum-date');
+    const hourInput = document.getElementById('einaescherungsdatum-hour');
+    const minuteInput = document.getElementById('einaescherungsdatum-minute');
+    
+    // Event Listener für Date Input
+    if (dateInput) {
+        dateInput.addEventListener('change', updateTimeFromInputs);
+    }
+    
+    // Event Listener für Hour und Minute Inputs
+    if (hourInput) {
+        hourInput.addEventListener('change', updateTimeFromInputs);
+        hourInput.addEventListener('input', updateTimeFromInputs);
+    }
+    
+    if (minuteInput) {
+        minuteInput.addEventListener('change', updateTimeFromInputs);
+        minuteInput.addEventListener('input', updateTimeFromInputs);
+    }
+    
+    // Datepicker beim Klick auf das gesamte Eingabefeld öffnen
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    
+    dateInputs.forEach(input => {
+        input.addEventListener('click', function() {
+            if (typeof this.showPicker === 'function') {
+                try {
+                    this.showPicker();
+                } catch (e) {
+                    this.focus();
+                }
+            } else {
+                this.focus();
+            }
+        });
+    });
+    
+    // Beobachte DOM-Änderungen, um updateTimeFromInputs aufzurufen wenn nötig
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            // Wenn das DateTime-Feld sichtbar wird, aktualisiere
+            const hourInput = document.getElementById('einaescherungsdatum-hour');
+            const minuteInput = document.getElementById('einaescherungsdatum-minute');
+            if (hourInput && minuteInput && hourInput.offsetParent !== null) {
+                updateTimeFromInputs();
+            }
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style', 'x-show']
+    });
+});
 </script>
 
 </body>

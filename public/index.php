@@ -105,7 +105,12 @@ switch ($routeInfo[0]) {
 
         // Define protected routes that require authentication
         $protectedRoutes = ['/kremation', '/herkunft', '/standort', '/users', '/statistics', '/notifications'];
-        $isProtectedRoute = in_array($uri, $protectedRoutes) || str_starts_with($uri, '/kremation/') || str_starts_with($uri, '/users/') || str_starts_with($uri, '/notifications/');
+        $isProtectedRoute = in_array($uri, $protectedRoutes)
+            || str_starts_with($uri, '/kremation/') 
+            || str_starts_with($uri, '/herkunft/') 
+            || str_starts_with($uri, '/standort/')
+            || str_starts_with($uri, '/users/') 
+            || str_starts_with($uri, '/notifications/');
         
         // Check authentication for protected routes
         if ($isProtectedRoute) {

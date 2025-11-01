@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * 
  * @property int $id
  * @property string $username
+ * @property string $name
  * @property string $email
  * @property string $password_hash
  * @property string $role

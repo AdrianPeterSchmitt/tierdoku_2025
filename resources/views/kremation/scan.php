@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR-Code Scannen - Dokumentation der anonymen Tiere</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -15,10 +16,15 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen px-4 py-8">
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen">
 
+<?php require $GLOBALS['viewBasePath'] . 'partials/nav.php'; ?>
+
+<div class="w-full px-4 py-8">
 <div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-8 shadow-2xl w-full">
-    <h2 class="text-2xl font-bold text-center mb-6">QR-Code Scannen</h2>
+    <h2 class="text-2xl font-bold text-center mb-2">QR-Code Scannen (Schnell)</h2>
+    <p class="text-center text-gray-400 mb-2">Scannen Sie das Etikett auf dem Beutel vor der Verbrennung</p>
+    <p class="text-center text-sm text-green-400 mb-6">⚡ Automatischer Abschluss - Perfekt für einzelne Beutel</p>
     
     <div class="space-y-4">
     <!-- Scanner Area -->
@@ -197,27 +203,18 @@ function processQRData(qrData) {
 
             // Display kremation info
             const k = result.kremation;
-            resultDiv.innerHTML = `
-                <div class="space-y-2">
-                    <h3 class="text-lg font-bold">Kremation gefunden</h3>
-                    <p><strong>Vorgang Nr.:</strong> #${k.vorgangs_id}</p>
-                    <p><strong>Standort:</strong> ${k.standort}</p>
-                    <p><strong>Eingangsdatum:</strong> ${k.eingangsdatum}</p>
-                    <p><strong>Gewicht:</strong> ${k.gewicht} kg</p>
-                    <p><strong>Status:</strong> ${k.is_completed ? '✅ Abgeschlossen' : '⏳ Offen'}</p>
-                    <div class="mt-4">
-                        <a href="${k.url}" class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition">
-                            Zur Kremation
-                        </a>
-                    </div>
-                </div>
-            `;
-            resultDiv.classList.remove('hidden');
-
-            // Restart scanner after 3 seconds
-            setTimeout(() => {
-                restartScanner();
-            }, 3000);
+            
+            // Wenn Kremation noch offen ist, automatisch abschließen
+            if (!k.is_completed) {
+                // Automatisch abschließen
+                completeKremation(k.vorgangs_id, k, resultDiv, flashMsg);
+            } else {
+                // Bereits abgeschlossen - nur anzeigen
+                showKremationInfo(k, resultDiv, flashMsg);
+                setTimeout(() => {
+                    restartScanner();
+                }, 3000);
+            }
         } else {
             flashMsg.className = 'mb-4 p-4 rounded-lg border border-red-500/50 bg-red-900/20 text-red-300';
             flashMsg.textContent = result.error || 'Fehler beim Verarbeiten des QR-Codes';
@@ -231,6 +228,94 @@ function processQRData(qrData) {
         flashMsg.classList.remove('hidden');
         restartScanner();
     });
+}
+
+function completeKremation(vorgangsId, kremation, resultDiv, flashMsg) {
+    // Zeige Info während des Abschlusses
+    resultDiv.innerHTML = `
+        <div class="space-y-2">
+            <h3 class="text-lg font-bold">Kremation gefunden</h3>
+            <p><strong>Vorgang Nr.:</strong> #${vorgangsId}</p>
+            <p><strong>Standort:</strong> ${kremation.standort}</p>
+            <p class="text-yellow-400">⏳ Wird abgeschlossen...</p>
+        </div>
+    `;
+    resultDiv.classList.remove('hidden');
+    
+    // Abschluss-Request senden
+    fetch('/kremation/complete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vorgang: vorgangsId })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // Erfolg - Kremation abgeschlossen
+            flashMsg.className = 'mb-4 p-4 rounded-lg border border-green-500/50 bg-green-900/20 text-green-300';
+            flashMsg.textContent = '✅ Kremation #' + vorgangsId + ' wurde erfolgreich abgeschlossen!';
+            flashMsg.classList.remove('hidden');
+            
+            // Zeige Erfolgs-Info
+            resultDiv.innerHTML = `
+                <div class="space-y-2">
+                    <h3 class="text-lg font-bold text-green-400">✅ Kremation abgeschlossen</h3>
+                    <p><strong>Vorgang Nr.:</strong> #${vorgangsId}</p>
+                    <p><strong>Standort:</strong> ${kremation.standort}</p>
+                    <p><strong>Eingangsdatum:</strong> ${kremation.eingangsdatum}</p>
+                    <p><strong>Gewicht:</strong> ${kremation.gewicht} kg</p>
+                    <p><strong>Einaescherungsdatum:</strong> ${result.date}</p>
+                    <p class="text-sm text-gray-400 mt-4">Scanner startet automatisch neu...</p>
+                </div>
+            `;
+            
+            // Restart scanner after 2 seconds
+            setTimeout(() => {
+                restartScanner();
+            }, 2000);
+        } else {
+            // Fehler beim Abschluss
+            flashMsg.className = 'mb-4 p-4 rounded-lg border border-red-500/50 bg-red-900/20 text-red-300';
+            flashMsg.textContent = 'Fehler beim Abschluss: ' + (result.error || 'Unbekannter Fehler');
+            flashMsg.classList.remove('hidden');
+            
+            // Zeige Info mit Fehler
+            showKremationInfo(kremation, resultDiv, flashMsg);
+            setTimeout(() => {
+                restartScanner();
+            }, 3000);
+        }
+    })
+    .catch(error => {
+        flashMsg.className = 'mb-4 p-4 rounded-lg border border-red-500/50 bg-red-900/20 text-red-300';
+        flashMsg.textContent = 'Fehler: ' + error.message;
+        flashMsg.classList.remove('hidden');
+        showKremationInfo(kremation, resultDiv, flashMsg);
+        setTimeout(() => {
+            restartScanner();
+        }, 3000);
+    });
+}
+
+function showKremationInfo(kremation, resultDiv, flashMsg) {
+    resultDiv.innerHTML = `
+        <div class="space-y-2">
+            <h3 class="text-lg font-bold">Kremation gefunden</h3>
+            <p><strong>Vorgang Nr.:</strong> #${kremation.vorgangs_id}</p>
+            <p><strong>Standort:</strong> ${kremation.standort}</p>
+            <p><strong>Eingangsdatum:</strong> ${kremation.eingangsdatum}</p>
+            <p><strong>Gewicht:</strong> ${kremation.gewicht} kg</p>
+            <p><strong>Status:</strong> ${kremation.is_completed ? '✅ Abgeschlossen' : '⏳ Offen'}</p>
+            <div class="mt-4">
+                <a href="${kremation.url}" class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition">
+                    Zur Kremation
+                </a>
+            </div>
+        </div>
+    `;
+    resultDiv.classList.remove('hidden');
 }
 
 function restartScanner() {
@@ -268,6 +353,13 @@ function restartScanner() {
     }, 1000);
 }
 </script>
+
+</div>
+</div>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
 
 </body>
 </html>

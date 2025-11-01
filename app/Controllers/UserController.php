@@ -55,6 +55,45 @@ class UserController
     }
 
     /**
+     * Get user data for editing
+     * 
+     * @param array<string, mixed> $vars
+     * @return void
+     */
+    public function edit(array $vars): void
+    {
+        $currentUser = $this->getCurrentUser();
+        header('Content-Type: application/json');
+
+        if (!$currentUser->isAdmin()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Insufficient permissions']);
+            return;
+        }
+
+        $userId = (int) ($vars['id'] ?? 0);
+        $user = User::with('standort')->find($userId);
+
+        if (!$user) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Benutzer nicht gefunden']);
+            return;
+        }
+
+        echo json_encode([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'username' => $user->username,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'standort_id' => $user->standort_id,
+            ],
+        ]);
+    }
+
+    /**
      * Store a new user
      * 
      * @return void
@@ -225,6 +264,13 @@ class UserController
         if ($user->id === $currentUser->id) {
             http_response_code(400);
             echo json_encode(['error' => 'Du kannst deinen eigenen Account nicht löschen.']);
+            return;
+        }
+
+        // Prevent deleting admin users
+        if ($user->role === 'admin') {
+            http_response_code(400);
+            echo json_encode(['error' => 'Admin-Benutzer können nicht gelöscht werden.']);
             return;
         }
 

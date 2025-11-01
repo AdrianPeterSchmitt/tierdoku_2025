@@ -53,6 +53,11 @@ class StatisticsController
             $query->where('standort_id', $_GET['standort_id']);
         }
 
+        // Apply herkunft filter
+        if (!empty($_GET['herkunft_id'])) {
+            $query->where('herkunft_id', $_GET['herkunft_id']);
+        }
+
         // Apply date filter
         $query->whereBetween('eingangsdatum', [$dateFrom, $dateTo]);
 
@@ -65,12 +70,22 @@ class StatisticsController
         // Get all standorte for filter
         $standorte = Standort::aktiv()->get();
 
+        // Get all herkunfte for filter
+        $herkunfteQuery = Herkunft::query();
+        if (!$user->isAdmin()) {
+            // Non-admins: nur Herkünfte des eigenen Standorts
+            $herkunfteQuery->where('standort_id', $user->standort_id);
+        }
+        $herkunfte = $herkunfteQuery->orderBy('name')->get();
+
         return view('statistics/index', [
             'stats' => $stats,
             'standorte' => $standorte,
+            'herkunfte' => $herkunfte,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'currentStandort' => $_GET['standort_id'] ?? null,
+            'currentHerkunft' => $_GET['herkunft_id'] ?? null,
             'user' => $user,
         ]);
     }

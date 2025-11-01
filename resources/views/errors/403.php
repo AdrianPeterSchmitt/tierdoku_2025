@@ -10,9 +10,6 @@
     <div class="text-center">
         <h1 class="text-4xl font-bold mb-4">403</h1>
         <p class="text-xl text-gray-300 mb-6"><?= htmlspecialchars($message ?? 'Keine Berechtigung') ?></p>
-        <a href="/kremation" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg inline-block">
-            Zurück zu Kremationen
-        </a>
     </div>
 </body>
 </html>

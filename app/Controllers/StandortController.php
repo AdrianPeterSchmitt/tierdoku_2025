@@ -59,6 +59,41 @@ class StandortController
     }
 
     /**
+     * Get standort data for editing
+     * 
+     * @param array<string, mixed> $vars
+     * @return string
+     */
+    public function edit(array $vars): string
+    {
+        /** @var User $user */
+        $user = $_REQUEST['_user'] ?? null;
+        header('Content-Type: application/json');
+
+        if (!$user || (!$user->isAdmin() && !$user->isManager())) {
+            http_response_code(403);
+            return (string) json_encode(['success' => false, 'error' => 'Keine Berechtigung']);
+        }
+
+        $id = (int) ($vars['id'] ?? 0);
+        $standort = Standort::find($id);
+
+        if (!$standort) {
+            http_response_code(404);
+            return (string) json_encode(['success' => false, 'error' => 'Standort nicht gefunden']);
+        }
+
+        return (string) json_encode([
+            'success' => true,
+            'standort' => [
+                'standort_id' => $standort->standort_id,
+                'name' => $standort->name,
+                'aktiv' => $standort->aktiv,
+            ],
+        ]);
+    }
+
+    /**
      * Store a new standort
      * 
      * @return string

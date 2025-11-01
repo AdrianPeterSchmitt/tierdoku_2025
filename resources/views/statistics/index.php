@@ -33,7 +33,7 @@
     <!-- Filter -->
     <section class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-6 shadow-2xl">
         <h2 class="text-xl font-bold mb-4">Filter</h2>
-        <form method="GET" action="/statistics" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" action="/statistics" class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-300 mb-2">Von</label>
                 <input type="date" name="from" value="<?= htmlspecialchars($dateFrom) ?>" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white">
@@ -55,6 +55,17 @@
                 </select>
             </div>
             <?php endif; ?>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Herkunft</label>
+                <select name="herkunft_id" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white">
+                    <option value="">Alle</option>
+                    <?php foreach ($herkunfte as $h): ?>
+                    <option value="<?= $h->herkunft_id ?>" <?= $currentHerkunft == $h->herkunft_id ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($h->name) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <div class="flex items-end">
                 <button type="submit" class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition">
                     Filtern
@@ -305,6 +316,30 @@ if (statusCtx) {
         }
     });
 }
+
+// Datepicker beim Klick auf das gesamte Eingabefeld öffnen
+document.addEventListener('DOMContentLoaded', function() {
+    // Alle Date- und DateTime-Local-Felder finden
+    const dateInputs = document.querySelectorAll('input[type="date"], input[type="datetime-local"]');
+    
+    dateInputs.forEach(input => {
+        // Beim Klick auf das Feld den Picker öffnen
+        input.addEventListener('click', function() {
+            // Moderne Browser unterstützen showPicker()
+            if (typeof this.showPicker === 'function') {
+                try {
+                    this.showPicker();
+                } catch (e) {
+                    // Fallback: einfach focus setzen (öffnet den Picker in den meisten Browsern)
+                    this.focus();
+                }
+            } else {
+                // Fallback für ältere Browser
+                this.focus();
+            }
+        });
+    });
+});
 </script>
 
 </body>
