@@ -32,14 +32,16 @@ jobs:
         run: vendor/bin/pint --test
       
       - name: Run Static Analysis (PHPStan)
-        run: vendor/bin/phpstan analyse app
+        run: php -d memory_limit=512M vendor/bin/phpstan analyse app
         continue-on-error: true
       
       - name: Run Unit Tests
         run: vendor/bin/phpunit tests/Unit --coverage-text
+        continue-on-error: false
       
       - name: Run Feature/E2E Tests
         run: vendor/bin/phpunit tests/Feature --coverage-text
+        continue-on-error: false
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3

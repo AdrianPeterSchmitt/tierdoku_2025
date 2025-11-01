@@ -21,7 +21,7 @@ class HomePageTest extends TestCase
             $output = ob_get_clean();
 
             // Assertions
-            $this->assertStringContainsString('Tierdokumentation', $output);
+            $this->assertStringContainsString('Dokumentation der anonymen Tiere', $output);
             $this->assertStringContainsString('Willkommen', $output);
             $this->assertStringContainsString('APP_ENV', $output);
         } catch (\Exception $e) {
