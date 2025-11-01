@@ -88,3 +88,15 @@ if (!function_exists('now')) {
         return \Carbon\Carbon::now();
     }
 }
+
+if (!function_exists('app_timezone')) {
+    /**
+     * Get the configured application timezone
+     *
+     * @return string
+     */
+    function app_timezone(): string
+    {
+        return $_ENV['APP_TIMEZONE'] ?? 'Europe/Berlin';
+    }
+}

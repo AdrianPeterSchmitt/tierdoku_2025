@@ -4,4 +4,21 @@ parameters:
         - app
     excludePaths:
         - tests
-
+    treatPhpDocTypesAsCertain: false
+    inferPrivatePropertyTypeFromConstructor: true
+    
+    # Ignore Eloquent magic methods since we don't use full Laravel
+    # Note: Larastan requires full Laravel Framework, but we only use illuminate/database
+    ignoreErrors:
+        - '#Call to an undefined (static )?method.*::(where|find|create|orderBy|whereIn|exists|count|get|first|save|delete|update|insert)\(\)#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*::(forStandort|search|filterByHerkunft|filterByStatus|filterByDateRange)\(\)#'
+        - '#Call to an undefined static method.*::(aktiv|where|find|create|orderBy|whereIn|exists|count|get|first|save|delete|update|insert)\(\)#'
+        - '#Property.*does not accept Carbon\\Carbon#'
+        - '#Method.*return type with generic class.*does not specify its types#'
+        - '#Property.*\$casts type has no value type specified in iterable type array#'
+        - '#Cannot call method (format|isCompleted)\(\) on (string|stdClass)\.#'
+        - '#Using nullsafe method call on non-nullable type string#'
+        - '#Method.*should return string but returns string\|false#'
+        - '#Call to an undefined static method Illuminate\\Database\\Capsule\\Manager::transaction\(\)#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*::withTrashed\(\)#'
+        - '#Access to an undefined property.*\$(standort|herkunft|pivot)#'

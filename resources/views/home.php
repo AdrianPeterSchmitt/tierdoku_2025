@@ -8,7 +8,7 @@ $content = ob_start();
         <div class="px-4 py-5 sm:p-6">
             <div class="text-center">
                 <h1 class="text-4xl font-bold text-gray-900 mb-4">
-                    🎉 Willkommen zur Tierdokumentation!
+                    🎉 Willkommen zur Dokumentation der anonymen Tiere!
                 </h1>
                 <p class="text-lg text-gray-600 mb-8">
                     Deine moderne PHP WebApp ist erfolgreich eingerichtet.

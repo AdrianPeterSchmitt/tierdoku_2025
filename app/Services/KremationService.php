@@ -100,11 +100,14 @@ class KremationService
 
             // Get or create herkunft
             $herkunftName = trim($data['Herkunft']);
-            $herkunft = Herkunft::where('name', $herkunftName)->first();
+            $herkunft = Herkunft::where('name', $herkunftName)
+                ->where('standort_id', $standortId)
+                ->first();
 
             if (!$herkunft) {
                 $herkunft = Herkunft::create([
                     'name' => $herkunftName,
+                    'standort_id' => $standortId,
                     'verwendungen_count' => 0,
                 ]);
                 $herkunftId = $herkunft->herkunft_id;
@@ -202,11 +205,14 @@ class KremationService
                 $kremation->save();
             } elseif ($field === 'Herkunft') {
                 $herkunftName = trim((string) $value);
-                $herkunft = Herkunft::where('name', $herkunftName)->first();
+                $herkunft = Herkunft::where('name', $herkunftName)
+                    ->where('standort_id', $kremation->standort_id)
+                    ->first();
 
                 if (!$herkunft) {
                     $herkunft = Herkunft::create([
                         'name' => $herkunftName,
+                        'standort_id' => $kremation->standort_id,
                         'verwendungen_count' => 0,
                     ]);
                     $herkunftId = $herkunft->herkunft_id;
@@ -240,6 +246,118 @@ class KremationService
             );
 
             return true;
+        });
+    }
+
+    /**
+     * Update full kremation (all fields)
+     * 
+     * @param Kremation $kremation
+     * @param array<string, mixed> $data
+     * @param User $user
+     * @return Kremation
+     */
+    public function updateFull(Kremation $kremation, array $data, User $user): Kremation
+    {
+        $errors = $this->validate($data);
+
+        if (count($errors) > 0) {
+            throw new InvalidArgumentException(implode(' ', $errors));
+        }
+
+        return Capsule::transaction(function () use ($kremation, $data, $user) {
+            $oldValues = $kremation->getAttributes();
+
+            // Get standort_id
+            $standort = Standort::where('name', $data['Standort'])->first();
+
+            if (!$standort) {
+                throw new InvalidArgumentException('Unbekannter Standort: ' . $data['Standort']);
+            }
+
+            $standortId = $standort->standort_id;
+
+            // Get or create herkunft
+            $herkunftName = trim($data['Herkunft']);
+            $herkunft = Herkunft::where('name', $herkunftName)
+                ->where('standort_id', $standortId)
+                ->first();
+
+            if (!$herkunft) {
+                $herkunft = Herkunft::create([
+                    'name' => $herkunftName,
+                    'standort_id' => $standortId,
+                    'verwendungen_count' => 0,
+                ]);
+                $herkunftId = $herkunft->herkunft_id;
+            } else {
+                $herkunftId = $herkunft->herkunft_id;
+            }
+
+            // Parse gewicht
+            $gewicht = (float) str_replace(',', '.', trim((string) $data['Gewicht']));
+
+            // Update kremation fields
+            $kremation->eingangsdatum = $data['Eingangsdatum'] ?? $kremation->eingangsdatum;
+            $kremation->gewicht = $gewicht;
+            $kremation->standort_id = $standortId;
+            $kremation->herkunft_id = $herkunftId;
+
+            // Update Einäscherungsdatum if provided
+            if (!empty($data['Einaescherungsdatum'])) {
+                $einaescherungsdatum = trim($data['Einaescherungsdatum']);
+                // Convert from datetime-local format (YYYY-MM-DDTHH:mm) to datetime
+                if (strpos($einaescherungsdatum, 'T') !== false) {
+                    $kremation->einaescherungsdatum = str_replace('T', ' ', $einaescherungsdatum) . ':00';
+                } else {
+                    $kremation->einaescherungsdatum = $einaescherungsdatum;
+                }
+            }
+
+            $kremation->save();
+
+            // Update tier counts
+            $tierMap = [
+                'Anzahl_Vogel' => 'Vogel',
+                'Anzahl_Heimtier' => 'Heimtier',
+                'Anzahl_Katze' => 'Katze',
+                'Anzahl_Hund' => 'Hund',
+            ];
+
+            // Sync tierarten using Eloquent relationships
+            $syncData = [];
+            foreach ($tierMap as $key => $bezeichnung) {
+                $anzahl = max(0, (int) ($data[$key] ?? 0));
+                
+                if ($anzahl > 0) {
+                    $tierart = Tierart::where('bezeichnung', $bezeichnung)->first();
+                    
+                    if ($tierart) {
+                        $syncData[$tierart->tierart_id] = ['anzahl' => $anzahl];
+                    }
+                }
+            }
+            
+            // Sync all tierarten at once
+            $kremation->tierarten()->sync($syncData);
+
+            // Audit log
+            $this->auditService->log(
+                $user,
+                'updated',
+                'kremation',
+                $kremation->vorgangs_id,
+                $oldValues,
+                [
+                    'eingangsdatum' => $kremation->eingangsdatum->format('Y-m-d'),
+                    'gewicht' => $kremation->gewicht,
+                    'standort_id' => $kremation->standort_id,
+                    'herkunft_id' => $kremation->herkunft_id,
+                    'einaescherungsdatum' => $kremation->einaescherungsdatum?->format('Y-m-d H:i:s'),
+                ]
+            );
+
+            return $kremation;
         });
     }
 

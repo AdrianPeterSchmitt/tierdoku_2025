@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR-Code Scannen - Tierdokumentation</title>
+    <title>QR-Code Scannen - Dokumentation der anonymen Tiere</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -15,14 +15,18 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen flex items-center justify-center px-4">
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen px-4 py-8">
 
-<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-8 shadow-2xl max-w-2xl w-full">
+<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-8 shadow-2xl w-full">
     <h2 class="text-2xl font-bold text-center mb-6">QR-Code Scannen</h2>
     
     <div class="space-y-4">
-        <!-- Scanner Area -->
-        <div id="qr-reader" class="mb-4"></div>
+    <!-- Scanner Area -->
+    <div id="qr-reader" class="mb-4"></div>
+    <div id="error-message" class="hidden mt-4 p-4 bg-red-900/20 border border-red-500/50 rounded-lg text-red-300"></div>
+    <button id="start-camera-btn" class="mt-4 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition">
+        📷 Kamera starten
+    </button>
 
         <!-- Result Display -->
         <div id="qr-result" class="hidden p-4 bg-gray-900 rounded-lg border border-gray-700"></div>
@@ -46,33 +50,109 @@ let html5QrcodeScanner = null;
 document.addEventListener('DOMContentLoaded', function() {
     html5QrcodeScanner = new Html5Qrcode("qr-reader");
     
-    function onScanSuccess(decodedText, decodedResult) {
-        // Stop scanning
-        html5QrcodeScanner.stop().then(() => {
-            console.log('QR Code scanning stopped');
-        }).catch(() => {
-            // Ignore
-        });
-
-        // Process QR data
-        processQRData(decodedText);
-    }
-
-    function onScanFailure(error) {
-        // Ignore scan errors
-    }
-
-    // Start scanning with back camera
-    html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-        },
-        onScanSuccess,
-        onScanFailure
-    );
+    // Button Event Listener
+    document.getElementById('start-camera-btn').addEventListener('click', startScanning);
+    
+    // Automatisch starten (optional)
+    // startScanning();
 });
+
+function startScanning() {
+    const button = document.getElementById('start-camera-btn');
+    const errorDiv = document.getElementById('error-message');
+    
+    if (button) {
+        button.disabled = true;
+        button.textContent = '⏳ Kamera wird gestartet...';
+    }
+    
+    errorDiv?.classList.add('hidden');
+    
+    // Versuche zuerst environment (Rückkamera auf Handy), dann user (Front-Kamera/Webcam)
+    const cameraConfigs = [
+        { facingMode: "environment" },  // Rückkamera (Handy)
+        { facingMode: "user" }           // Front-Kamera / Webcam (Desktop)
+    ];
+    
+    let configIndex = 0;
+    
+    function tryStartCamera() {
+        const config = cameraConfigs[configIndex];
+        
+        html5QrcodeScanner.start(
+            config,
+            {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            onScanSuccess,
+            onScanFailure
+        ).then(() => {
+            // Erfolg - Kamera gestartet
+            if (button) {
+                button.classList.add('hidden');
+            }
+            if (errorDiv) {
+                errorDiv.classList.add('hidden');
+            }
+        }).catch((err) => {
+            // Fehler - versuche nächste Kamera
+            configIndex++;
+            
+            if (configIndex < cameraConfigs.length) {
+                // Versuche nächste Kamera-Konfiguration
+                tryStartCamera();
+            } else {
+                // Alle Kameras versucht - zeige Fehler
+                showCameraError(err);
+            }
+        });
+    }
+    
+    tryStartCamera();
+}
+
+function showCameraError(error) {
+    const button = document.getElementById('start-camera-btn');
+    const errorDiv = document.getElementById('error-message');
+    
+    let errorText = 'Kamera konnte nicht gestartet werden. ';
+    
+    if (error.message) {
+        errorText += error.message;
+    } else {
+        errorText += 'Bitte stellen Sie sicher, dass die Webcam verbunden ist und der Browser Zugriff hat.';
+    }
+    
+    errorText += '<br><small>Hinweis: Kamera-Zugriff wird nur über HTTPS oder localhost gewährt.</small>';
+    
+    if (errorDiv) {
+        errorDiv.innerHTML = errorText;
+        errorDiv.classList.remove('hidden');
+    }
+    
+    if (button) {
+        button.disabled = false;
+        button.textContent = '📷 Kamera erneut starten';
+    }
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    // Stop scanning
+    html5QrcodeScanner.stop().then(() => {
+        console.log('QR Code scanning stopped');
+    }).catch(() => {
+        // Ignore
+    });
+
+    // Process QR data
+    processQRData(decodedText);
+}
+
+function onScanFailure(error) {
+    // Ignore scan errors (kontinuierliches Scannen)
+}
 
 function processQRData(qrData) {
     const flashMsg = document.getElementById('flash-message');
@@ -155,37 +235,37 @@ function processQRData(qrData) {
 
 function restartScanner() {
     setTimeout(() => {
-        document.getElementById('qr-result').classList.add('hidden');
-        document.getElementById('flash-message').classList.add('hidden');
+        document.getElementById('qr-result')?.classList.add('hidden');
+        document.getElementById('flash-message')?.classList.add('hidden');
         
         if (html5QrcodeScanner) {
+            // Verwende user (Webcam) als Standard beim Restart
             html5QrcodeScanner.start(
-                { facingMode: "environment" },
+                { facingMode: "user" },
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 250 }
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
                 },
                 onScanSuccess,
                 onScanFailure
-            );
+            ).catch((err) => {
+                // Falls user nicht funktioniert, versuche environment
+                html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    },
+                    onScanSuccess,
+                    onScanFailure
+                ).catch((err2) => {
+                    console.error('Kamera konnte nicht neu gestartet werden:', err2);
+                });
+            });
         }
     }, 1000);
-}
-
-function onScanSuccess(decodedText, decodedResult) {
-    // Stop scanning
-    html5QrcodeScanner.stop().then(() => {
-        console.log('QR Code scanning stopped');
-    }).catch(() => {
-        // Ignore
-    });
-
-    // Process QR data
-    processQRData(decodedText);
-}
-
-function onScanFailure(error) {
-    // Ignore scan errors
 }
 </script>
 

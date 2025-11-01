@@ -47,7 +47,6 @@ $container->singleton(AuthController::class, function ($container) {
 $container->singleton(\App\Controllers\KremationController::class, function ($container) {
     return new \App\Controllers\KremationController(
         $container->get(KremationService::class),
-        $container->get(NotificationService::class),
         $container->get(QRCodeService::class),
         $container->get(PDFLabelService::class)
     );

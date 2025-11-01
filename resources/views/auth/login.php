@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Tierdokumentation</title>
+    <title>Login - Dokumentation der anonymen Tiere</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -17,7 +17,7 @@
         <!-- Logo/Header -->
         <div class="text-center mb-8">
             <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">
-                Tierdokumentation
+                Dokumentation der anonymen Tiere
             </h1>
             <p class="text-gray-400">Animea Tierkrematorium</p>
         </div>

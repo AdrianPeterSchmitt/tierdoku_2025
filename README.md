@@ -59,10 +59,16 @@ Bearbeite `.env` für lokale Entwicklung (SQLite):
 APP_NAME=Tierdokumentation
 APP_ENV=local
 APP_DEBUG=true
+APP_TIMEZONE=Europe/Berlin
 
 DB_CONNECTION=sqlite
 DB_DATABASE=./database/database.sqlite
 ```
+
+**Zeitzone:** Die `APP_TIMEZONE` Variable bestimmt die Zeitzone für alle Datum/Zeit-Operationen. Standard ist `Europe/Berlin` (Deutschland). Weitere Beispiele:
+- `America/New_York` - USA Ostküste
+- `Asia/Tokyo` - Japan
+- `UTC` - Koordinierte Weltzeit
 
 ### 3. Datenbank-Setup
 

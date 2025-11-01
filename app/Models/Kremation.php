@@ -20,6 +20,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  * @property int $herkunft_id
  * @property int|null $created_by
  * @property string|null $deleted_at
+ * @property \App\Models\Standort $standort
+ * @property \App\Models\Herkunft $herkunft
+ * @property \Illuminate\Database\Eloquent\Collection<int, \App\Models\Tierart> $tierarten
  */
 class Kremation extends Model
 {
@@ -87,16 +90,24 @@ class Kremation extends Model
 
     /**
      * Scope: Filter by standort
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
+     * @param int $standortId
+     * @return \Illuminate\Database\Eloquent\Builder<Kremation>
      */
-    public function scopeForStandort($query, int $standortId)
+    public function scopeForStandort(\Illuminate\Database\Eloquent\Builder $query, int $standortId): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('standort_id', $standortId);
     }
 
     /**
      * Scope: Search by vorgangs_id
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
+     * @param string $searchTerm
+     * @return \Illuminate\Database\Eloquent\Builder<Kremation>
      */
-    public function scopeSearch($query, string $searchTerm)
+    public function scopeSearch(\Illuminate\Database\Eloquent\Builder $query, string $searchTerm): \Illuminate\Database\Eloquent\Builder
     {
         if (is_numeric($searchTerm)) {
             return $query->where('vorgangs_id', (int) $searchTerm);
@@ -106,20 +117,30 @@ class Kremation extends Model
 
     /**
      * Scope: Filter by herkunft
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
+     * @param int $herkunftId
+     * @return \Illuminate\Database\Eloquent\Builder<Kremation>
      */
-    public function scopeFilterByHerkunft($query, int $herkunftId)
+    public function scopeFilterByHerkunft(\Illuminate\Database\Eloquent\Builder $query, int $herkunftId): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('herkunft_id', $herkunftId);
     }
 
     /**
      * Scope: Filter by status
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
+     * @param string $status
+     * @return \Illuminate\Database\Eloquent\Builder<Kremation>
      */
-    public function scopeFilterByStatus($query, string $status)
+    public function scopeFilterByStatus(\Illuminate\Database\Eloquent\Builder $query, string $status): \Illuminate\Database\Eloquent\Builder
     {
         if ($status === 'open') {
+            /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
             return $query->whereNull('einaescherungsdatum');
         } elseif ($status === 'completed') {
+            /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
             return $query->whereNotNull('einaescherungsdatum');
         }
         return $query;
@@ -127,9 +148,15 @@ class Kremation extends Model
 
     /**
      * Scope: Filter by date range
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
+     * @param string $from
+     * @param string $to
+     * @return \Illuminate\Database\Eloquent\Builder<Kremation>
      */
-    public function scopeFilterByDateRange($query, string $from, string $to)
+    public function scopeFilterByDateRange(\Illuminate\Database\Eloquent\Builder $query, string $from, string $to): \Illuminate\Database\Eloquent\Builder
     {
+        /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
         return $query->whereBetween('eingangsdatum', [$from, $to]);
     }
 
@@ -138,7 +165,9 @@ class Kremation extends Model
      */
     public static function nextVorgangsNummer(int $standortId): int
     {
-        $last = static::forStandort($standortId)
+        /** @var \Illuminate\Database\Eloquent\Builder<Kremation> $query */
+        $query = static::query();
+        $last = $query->where('standort_id', $standortId)
             ->withTrashed()
             ->orderBy('vorgangs_id', 'desc')
             ->first();

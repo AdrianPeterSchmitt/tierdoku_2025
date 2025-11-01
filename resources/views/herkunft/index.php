@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Herkunft-Verwaltung - Tierdokumentation</title>
+    <title>Herkunft-Verwaltung - Dokumentation der anonymen Tiere</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen">
     <?php require $GLOBALS['viewBasePath'] . 'partials/nav.php'; ?>
-    <div class="max-w-4xl mx-auto p-8" x-data="herkunftApp()">
+    <div class="w-full px-4 py-8" x-data="herkunftApp()">
         <h1 class="text-3xl font-bold text-white mb-6">Herkunft-Verwaltung</h1>
 
         <!-- Filter / Standortwahl -->

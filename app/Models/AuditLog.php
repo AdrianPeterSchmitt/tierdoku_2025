@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AuditLog extends Model
 {
+    protected $table = 'audit_log';
+    
     public $timestamps = false;
 
     protected $fillable = [

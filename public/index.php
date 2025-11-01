@@ -20,6 +20,10 @@ if (file_exists(__DIR__ . '/../.env')) {
     $dotenv->load();
 }
 
+// Set timezone from environment variable (default: Europe/Berlin for Germany)
+$timezone = $_ENV['APP_TIMEZONE'] ?? 'Europe/Berlin';
+date_default_timezone_set($timezone);
+
 // Setup Logger
 $logger = new Logger('app');
 $logFile = __DIR__ . '/../storage/logs/app.log';
@@ -100,7 +104,7 @@ switch ($routeInfo[0]) {
         $container = require __DIR__ . '/../config/container.php';
 
         // Define protected routes that require authentication
-        $protectedRoutes = ['/kremation', '/herkunft', '/users', '/statistics', '/notifications'];
+        $protectedRoutes = ['/kremation', '/herkunft', '/standort', '/users', '/statistics', '/notifications'];
         $isProtectedRoute = in_array($uri, $protectedRoutes) || str_starts_with($uri, '/kremation/') || str_starts_with($uri, '/users/') || str_starts_with($uri, '/notifications/');
         
         // Check authentication for protected routes
@@ -129,15 +133,25 @@ switch ($routeInfo[0]) {
             } elseif (is_callable($handler)) {
                 echo $handler($vars);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             http_response_code(500);
-            $logger->error($e->getMessage(), ['exception' => $e]);
+            $logger->error($e->getMessage(), [
+                'exception' => $e,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'uri' => $uri ?? 'unknown',
+                'vars' => $vars ?? []
+            ]);
 
-            if ($_ENV['APP_DEBUG'] ?? false) {
-                echo '<pre>' . $e->getMessage() . "\n" . $e->getTraceAsString() . '</pre>';
-            } else {
-                echo view('errors/500');
-            }
+            // Always show detailed error for debugging (remove in production)
+            echo '<pre style="background:#000;color:#0f0;padding:20px;font-family:monospace;">';
+            echo '<strong style="color:#f00;">ERROR:</strong> ' . htmlspecialchars($e->getMessage()) . "\n\n";
+            echo '<strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n";
+            echo '<strong>URI:</strong> ' . htmlspecialchars($uri ?? 'unknown') . "\n";
+            echo '<strong>Vars:</strong> ' . print_r($vars ?? [], true) . "\n\n";
+            echo '<strong>Trace:</strong>\n' . htmlspecialchars($e->getTraceAsString());
+            echo '</pre>';
         }
         break;
 }

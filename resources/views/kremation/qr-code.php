@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR-Code - <?= htmlspecialchars($kremation->vorgangs_id) ?> - Tierdokumentation</title>
+    <title>QR-Code - <?= htmlspecialchars($kremation->vorgangs_id) ?> - Dokumentation der anonymen Tiere</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -13,9 +13,9 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen flex items-center justify-center px-4">
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white min-h-screen px-4 py-8">
 
-<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-8 shadow-2xl max-w-md w-full">
+<div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-8 shadow-2xl w-full">
     <h2 class="text-2xl font-bold text-center mb-6">QR-Code</h2>
     
     <div class="space-y-4">
@@ -29,7 +29,15 @@
 
         <!-- QR Code Image -->
         <div class="flex justify-center bg-white p-4 rounded-lg">
-            <img src="data:image/png;base64,<?= $qrBase64 ?>" alt="QR-Code" class="w-64 h-64">
+            <?php
+            $mimeType = $qrMimeType ?? 'image/png';
+            if ($mimeType === 'image/svg+xml') {
+                // SVG can be embedded directly or as base64
+                echo '<img src="data:image/svg+xml;base64,' . $qrBase64 . '" alt="QR-Code" class="w-64 h-64">';
+            } else {
+                echo '<img src="data:image/png;base64,' . $qrBase64 . '" alt="QR-Code" class="w-64 h-64">';
+            }
+            ?>
         </div>
 
         <!-- Info -->

@@ -16,7 +16,7 @@ class UserController
     /**
      * Get current user from session
      */
-    private function getCurrentUser()
+    private function getCurrentUser(): \App\Models\User
     {
         $user = $_REQUEST['_user'] ?? null;
 

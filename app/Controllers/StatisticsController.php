@@ -7,7 +7,7 @@ namespace App\Controllers;
 use App\Models\Kremation;
 use App\Models\Standort;
 use App\Models\Herkunft;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Statistics Controller
@@ -17,7 +17,7 @@ class StatisticsController
     /**
      * Get current user from session
      */
-    private function getCurrentUser()
+    private function getCurrentUser(): \App\Models\User
     {
         $user = $_REQUEST['_user'] ?? null;
 
@@ -78,7 +78,7 @@ class StatisticsController
     /**
      * Calculate statistics from kremations
      *
-     * @param Collection $kremations
+     * @param Collection<int, Kremation> $kremations
      * @return array<string, mixed>
      */
     private function calculateStatistics(Collection $kremations): array
@@ -92,7 +92,10 @@ class StatisticsController
 
         // Count by standort
         $byStandort = $kremations->groupBy('standort_id')->map(function ($group, $standortId) {
-            $standort = $group->first()->standort;
+            /** @var Kremation $first */
+            $first = $group->first();
+            /** @var \App\Models\Standort|null $standort */
+            $standort = $first->standort;
             return [
                 'name' => $standort->name ?? 'Unbekannt',
                 'count' => $group->count(),
@@ -102,7 +105,10 @@ class StatisticsController
 
         // Count by herkunft
         $byHerkunft = $kremations->groupBy('herkunft_id')->map(function ($group, $herkunftId) {
-            $herkunft = $group->first()->herkunft;
+            /** @var Kremation $first */
+            $first = $group->first();
+            /** @var \App\Models\Herkunft|null $herkunft */
+            $herkunft = $first->herkunft;
             return [
                 'name' => $herkunft->name ?? 'Unbekannt',
                 'count' => $group->count(),
@@ -111,13 +117,21 @@ class StatisticsController
 
         // Count by tierart
         $byTierart = [];
-        foreach ($kremations as $kremation) {
-            foreach ($kremation->tierarten as $tierart) {
+        /** @var Kremation $kremationItem */
+        foreach ($kremations as $kremationItem) {
+            foreach ($kremationItem->tierarten as $tierart) {
+                /** @var \App\Models\Tierart $tierart */
+                $pivot = $tierart->pivot;
+                /** @var \Illuminate\Database\Eloquent\Relations\Pivot $pivot */
+                /** @var mixed $anzahlRaw */
+                $anzahlRaw = $pivot->getAttribute('anzahl');
+                /** @var int $anzahl */
+                $anzahl = is_int($anzahlRaw) ? $anzahlRaw : (int) $anzahlRaw;
                 $name = $tierart->bezeichnung;
                 if (!isset($byTierart[$name])) {
                     $byTierart[$name] = 0;
                 }
-                $byTierart[$name] += $tierart->pivot->anzahl;
+                $byTierart[$name] += $anzahl;
             }
         }
         arsort($byTierart);
@@ -126,9 +140,14 @@ class StatisticsController
         // Timeline data (last 30 days)
         $timeline = [];
         for ($i = 29; $i >= 0; $i--) {
-            $date = date('Y-m-d', strtotime("-$i days"));
+            $timestamp = strtotime("-$i days");
+            if ($timestamp === false) {
+                continue;
+            }
+            $date = date('Y-m-d', $timestamp);
             $count = $kremations->filter(fn($k) => $k->eingangsdatum->format('Y-m-d') === $date)->count();
-            $timeline[] = ['date' => date('d.m', strtotime($date)), 'count' => $count];
+            $formatTimestamp = strtotime($date);
+            $timeline[] = ['date' => $formatTimestamp !== false ? date('d.m', $formatTimestamp) : $date, 'count' => $count];
         }
 
         return [

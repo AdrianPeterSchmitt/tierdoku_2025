@@ -55,12 +55,23 @@ class PDFLabelService
         
         // Get tier counts
         $tierCounts = [];
-        foreach ($kremation->tierarten as $tierart) {
-            $tierCounts[$tierart->bezeichnung] = $tierart->pivot->anzahl;
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\Tierart> $tierarten */
+        $tierarten = $kremation->tierarten;
+        foreach ($tierarten as $tierart) {
+            /** @var \App\Models\Tierart $tierart */
+            $pivot = $tierart->pivot;
+            /** @var mixed $anzahlRaw */
+            $anzahlRaw = $pivot->getAttribute('anzahl');
+            /** @var int $anzahl */
+            $anzahl = is_int($anzahlRaw) ? $anzahlRaw : (int) $anzahlRaw;
+            $tierCounts[$tierart->bezeichnung] = $anzahl;
         }
 
-        $tierarten = implode(', ', array_map(
-            fn($name, $count) => "$name: $count",
+        /** @var array<string, int> $tierCounts */
+        $tierartenStr = implode(', ', array_map(
+            function ($name, $count) {
+                return "$name: $count";
+            },
             array_keys($tierCounts),
             array_values($tierCounts)
         ));
@@ -220,19 +231,21 @@ class PDFLabelService
      *
      * @param Kremation $kremation
      * @param string $qrCodeBase64 Base64 encoded QR code image
+     * @param string $qrMimeType MIME type of the QR code (image/png or image/svg+xml)
      * @return string PDF content as binary string
      */
-    public function generateLabelWithQR(Kremation $kremation, string $qrCodeBase64): string
+    public function generateLabelWithQR(Kremation $kremation, string $qrCodeBase64, string $qrMimeType = 'image/png'): string
     {
         $html = $this->buildLabelHTML($kremation);
 
         // Replace QR placeholder with actual QR code
+        $mimeType = $qrMimeType !== '' ? $qrMimeType : 'image/png';
         $html = str_replace(
             '<div style=\'width: 60mm; height: 60mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;\'>
                             Scannen Sie den QR-Code
                             <br>für Details
                         </div>',
-            '<img src="data:image/png;base64,' . $qrCodeBase64 . '" style="width: 60mm; height: 60mm;">',
+            '<img src="data:' . htmlspecialchars($mimeType) . ';base64,' . $qrCodeBase64 . '" style="width: 60mm; height: 60mm;">',
             $html
         );
 

@@ -48,8 +48,11 @@ class Standort extends Model
 
     /**
      * Scope: nur aktive Standorte
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder<Standort> $query
+     * @return \Illuminate\Database\Eloquent\Builder<Standort>
      */
-    public function scopeAktiv($query)
+    public function scopeAktiv(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('aktiv', true);
     }

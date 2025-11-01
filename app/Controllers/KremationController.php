@@ -12,6 +12,7 @@ use App\Models\Kremation;
 use App\Models\Standort;
 use App\Models\Herkunft;
 use App\Models\Tierart;
+use App\Models\User;
 use InvalidArgumentException;
 
 /**
@@ -21,7 +22,6 @@ class KremationController
 {
     public function __construct(
         private KremationService $kremationService,
-        private NotificationService $notificationService,
         private QRCodeService $qrCodeService,
         private PDFLabelService $pdfLabelService
     ) {
@@ -30,7 +30,7 @@ class KremationController
     /**
      * Get current user from session
      */
-    private function getCurrentUser()
+    private function getCurrentUser(): User
     {
         $user = $_REQUEST['_user'] ?? null;
 
@@ -125,6 +125,99 @@ class KremationController
     }
 
     /**
+     * Get updates since a specific timestamp
+     * 
+     * @return void
+     */
+    public function getUpdates(): void
+    {
+        $user = $this->getCurrentUser();
+
+        header('Content-Type: application/json');
+
+        try {
+            // Get since timestamp from query parameter
+            $since = $_GET['since'] ?? null;
+            $sinceTimestamp = null;
+
+            if ($since) {
+                try {
+                    $sinceTimestamp = new \DateTime($since);
+                } catch (\Exception $e) {
+                    throw new InvalidArgumentException('Invalid since timestamp format');
+                }
+            }
+
+            // Build query - same as index but filter by updated_at
+            $query = Kremation::with(['standort', 'herkunft', 'creator', 'tierarten']);
+
+            // Apply standort filter (non-admins see only their standort)
+            if (!$user->isAdmin()) {
+                $query->forStandort($user->standort_id);
+            }
+
+            // Filter by updated_at or created_at if since is provided
+            if ($sinceTimestamp) {
+                $query->where(function ($q) use ($sinceTimestamp) {
+                    $q->where('updated_at', '>', $sinceTimestamp->format('Y-m-d H:i:s'))
+                      ->orWhere('created_at', '>', $sinceTimestamp->format('Y-m-d H:i:s'));
+                });
+            }
+
+            // Get updates (limit to last 50 to prevent overload)
+            $updates = $query->orderBy('updated_at', 'desc')
+                ->take(50)
+                ->get();
+
+            // Format response
+            $formattedUpdates = $updates->map(function ($k) {
+                // Create tierarten map
+                $tierartenMap = [];
+                foreach ($k->tierarten as $ta) {
+                    $tierartenMap[$ta->bezeichnung] = $ta->pivot->anzahl ?? 0;
+                }
+
+                return [
+                    'vorgangs_id' => $k->vorgangs_id,
+                    'eingangsdatum' => $k->eingangsdatum->format('Y-m-d'),
+                    'herkunft' => $k->herkunft->name ?? '',
+                    'standort' => $k->standort->name ?? '',
+                    'vogel' => $tierartenMap['Vogel'] ?? 0,
+                    'heimtier' => $tierartenMap['Heimtier'] ?? 0,
+                    'katze' => $tierartenMap['Katze'] ?? 0,
+                    'hund' => $tierartenMap['Hund'] ?? 0,
+                    'gewicht' => $k->gewicht,
+                    'status' => $k->einaescherungsdatum ? 'Abgeschlossen' : 'Offen',
+                    'kremation' => $k->einaescherungsdatum ? $k->einaescherungsdatum->format('d.m.Y H:i') . ' Uhr' : '-',
+                    'einaescherungsdatum' => $k->einaescherungsdatum ? $k->einaescherungsdatum->format('Y-m-d H:i:s') : null,
+                    'updated_at' => $k->updated_at->format('Y-m-d H:i:s'),
+                    'created_at' => $k->created_at->format('Y-m-d H:i:s'),
+                ];
+            });
+
+            echo json_encode([
+                'success' => true,
+                'updates' => $formattedUpdates->toArray(),
+                'lastUpdate' => now()->format('Y-m-d H:i:s'),
+                'count' => $formattedUpdates->count(),
+            ]);
+        } catch (InvalidArgumentException $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            error_log('Kremation getUpdates error: ' . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'error' => 'Fehler beim Abrufen der Updates.',
+            ]);
+        }
+    }
+
+    /**
      * Store a new kremation
      * 
      * @return void
@@ -151,9 +244,71 @@ class KremationController
             ]);
         } catch (\Exception $e) {
             http_response_code(500);
+            // Log the actual error for debugging
+            error_log('Kremation store error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            
+            // In development, show actual error message
+            $errorMessage = ($_ENV['APP_DEBUG'] ?? false) 
+                ? $e->getMessage() 
+                : 'Ein Fehler ist aufgetreten.';
+                
             echo json_encode([
                 'success' => false,
-                'error' => 'Ein Fehler ist aufgetreten.',
+                'error' => $errorMessage,
+            ]);
+        }
+    }
+
+    /**
+     * Update full kremation (all fields)
+     * 
+     * @param array<string, mixed> $vars
+     * @return void
+     */
+    public function updateFull(array $vars): void
+    {
+        $user = $this->getCurrentUser();
+
+        header('Content-Type: application/json');
+
+        try {
+            $vorgang = (int) ($vars['id'] ?? 0);
+
+            if ($vorgang <= 0) {
+                throw new InvalidArgumentException('Invalid vorgangs_id');
+            }
+
+            $kremation = Kremation::find($vorgang);
+
+            if (!$kremation) {
+                throw new InvalidArgumentException('Kremation not found');
+            }
+
+            // Use $_POST for FormData (POST method works better with FormData in PHP)
+            $kremation = $this->kremationService->updateFull($kremation, $_POST, $user);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Kremation #{$kremation->vorgangs_id} erfolgreich aktualisiert.",
+                'vorgangs_id' => $kremation->vorgangs_id,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            error_log('Kremation updateFull error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            
+            $errorMessage = ($_ENV['APP_DEBUG'] ?? false) 
+                ? $e->getMessage() 
+                : 'Ein Fehler ist aufgetreten.';
+                
+            echo json_encode([
+                'success' => false,
+                'error' => $errorMessage,
             ]);
         }
     }
@@ -170,7 +325,7 @@ class KremationController
         header('Content-Type: application/json');
 
         try {
-            $input = file_get_contents('php://input');
+            $input = (string) file_get_contents('php://input');
             $data = json_decode($input, true);
 
             if (!is_array($data)) {
@@ -218,7 +373,7 @@ class KremationController
         header('Content-Type: application/json');
 
         try {
-            $input = file_get_contents('php://input');
+            $input = (string) file_get_contents('php://input');
             $data = json_decode($input, true);
 
             if (!is_array($data)) {
@@ -265,7 +420,7 @@ class KremationController
         header('Content-Type: application/json');
 
         try {
-            $input = file_get_contents('php://input');
+            $input = (string) file_get_contents('php://input');
             $data = json_decode($input, true);
 
             if (!is_array($data)) {
@@ -367,38 +522,57 @@ class KremationController
      * Generate QR code for a kremation
      *
      * @param array<string, mixed> $vars
-     * @return void
+     * @return string
      */
-    public function showQRCode(array $vars): void
+    public function showQRCode(array $vars): string
     {
-        $user = $this->getCurrentUser();
-        $vorgangsId = (int) ($vars['id'] ?? 0);
+        try {
+            $user = $this->getCurrentUser();
+            $vorgangsId = (int) ($vars['id'] ?? 0);
 
-        $kremation = Kremation::find($vorgangsId);
+            if ($vorgangsId <= 0) {
+                http_response_code(400);
+                return view('errors/404', ['message' => 'Ungültige Vorgangs-ID']);
+            }
 
-        if (!$kremation) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Kremation nicht gefunden']);
-            return;
+            $kremation = Kremation::with('standort')->find($vorgangsId);
+
+            if (!$kremation) {
+                http_response_code(404);
+                return view('errors/404', ['message' => 'Kremation nicht gefunden']);
+            }
+
+            // Check permissions
+            if (!$user->isAdmin() && $kremation->standort_id !== $user->standort_id) {
+                http_response_code(403);
+                return view('errors/403', ['message' => 'Keine Berechtigung']);
+            }
+
+            // Generate QR code
+            $qrBase64 = $this->qrCodeService->generateForKremation($kremation, 400);
+            $qrMimeType = $this->qrCodeService->getLastMimeType();
+
+            // Return view
+            return view('kremation/qr-code', [
+                'kremation' => $kremation,
+                'qrBase64' => $qrBase64,
+                'qrMimeType' => $qrMimeType,
+                'user' => $user,
+            ]);
+        } catch (\Throwable $e) {
+            // Log error and show debug info if enabled
+            error_log('QR Code Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            
+            http_response_code(500);
+            
+            if ($_ENV['APP_DEBUG'] ?? false) {
+                return '<pre>QR Code Error: ' . htmlspecialchars($e->getMessage()) . "\n" .
+                       'File: ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n" .
+                       htmlspecialchars($e->getTraceAsString()) . '</pre>';
+            }
+            
+            return view('errors/500');
         }
-
-        // Check permissions
-        if (!$user->isAdmin() && $kremation->standort_id !== $user->standort_id) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Keine Berechtigung']);
-            return;
-        }
-
-        // Generate QR code
-        $qrBase64 = $this->qrCodeService->generateForKremation($kremation, 400);
-
-        // Return as image
-        header('Content-Type: text/html; charset=utf-8');
-        echo view('kremation/qr-code', [
-            'kremation' => $kremation,
-            'qrBase64' => $qrBase64,
-            'user' => $user,
-        ]);
     }
 
     /**
@@ -411,6 +585,20 @@ class KremationController
         $user = $this->getCurrentUser();
 
         return view('kremation/scan', [
+            'user' => $user,
+        ]);
+    }
+
+    /**
+     * Batch scan QR codes
+     *
+     * @return string
+     */
+    public function batchScanQRCode(): string
+    {
+        $user = $this->getCurrentUser();
+
+        return view('kremation/batch-scan', [
             'user' => $user,
         ]);
     }
@@ -493,9 +681,10 @@ class KremationController
 
         // Generate QR code
         $qrBase64 = $this->qrCodeService->generateForKremation($kremation, 200);
+        $qrMimeType = $this->qrCodeService->getLastMimeType();
 
         // Generate PDF with QR code
-        $pdfContent = $this->pdfLabelService->generateLabelWithQR($kremation, $qrBase64);
+        $pdfContent = $this->pdfLabelService->generateLabelWithQR($kremation, $qrBase64, $qrMimeType);
 
         // Send PDF to browser
         header('Content-Type: application/pdf');

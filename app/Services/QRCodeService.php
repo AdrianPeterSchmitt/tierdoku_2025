@@ -9,6 +9,7 @@ use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Writer\SvgWriter;
 
 /**
  * QR Code Service
@@ -22,23 +23,51 @@ class QRCodeService
      *
      * @param Kremation $kremation
      * @param int $size
-     * @return string Base64 encoded PNG image
+     * @return string Base64 encoded image (PNG or SVG)
      */
     public function generateForKremation(Kremation $kremation, int $size = 300): string
     {
         $data = $this->buildQRData($kremation);
 
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->data($data)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size($size)
-            ->margin(10)
-            ->build();
+        // Check if GD extension is available for PNG generation
+        if (extension_loaded('gd')) {
+            $writer = new PngWriter();
+            $mimeType = 'image/png';
+        } else {
+            // Fallback to SVG if GD is not available
+            $writer = new SvgWriter();
+            $mimeType = 'image/svg+xml';
+        }
 
-        return base64_encode($result->getString());
+        $builder = new Builder(
+            writer: $writer,
+            data: $data,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: $size,
+            margin: 10
+        );
+
+        $result = $builder->build();
+        $imageData = base64_encode($result->getString());
+
+        // Store MIME type for later use
+        $this->lastMimeType = $mimeType;
+
+        return $imageData;
     }
+
+    /**
+     * Get the MIME type of the last generated QR code
+     *
+     * @return string
+     */
+    public function getLastMimeType(): string
+    {
+        return $this->lastMimeType ?? 'image/png';
+    }
+
+    private string $lastMimeType = 'image/png';
 
     /**
      * Save QR code as file
@@ -52,14 +81,28 @@ class QRCodeService
     {
         $data = $this->buildQRData($kremation);
 
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->data($data)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
-            ->size($size)
-            ->margin(10)
-            ->build();
+        // Check if GD extension is available for PNG generation
+        if (extension_loaded('gd')) {
+            $writer = new PngWriter();
+        } else {
+            // Fallback to SVG if GD is not available
+            $writer = new SvgWriter();
+            // Ensure .svg extension if not already set
+            if (pathinfo($filepath, PATHINFO_EXTENSION) !== 'svg') {
+                $filepath = pathinfo($filepath, PATHINFO_DIRNAME) . '/' . pathinfo($filepath, PATHINFO_FILENAME) . '.svg';
+            }
+        }
+
+        $builder = new Builder(
+            writer: $writer,
+            data: $data,
+            encoding: new Encoding('UTF-8'),
+            errorCorrectionLevel: ErrorCorrectionLevel::High,
+            size: $size,
+            margin: 10
+        );
+
+        $result = $builder->build();
 
         // Ensure directory exists
         $dir = dirname($filepath);
@@ -100,7 +143,7 @@ class QRCodeService
             'standort' => $kremation->standort->name ?? 'Unbekannt',
             'eingangsdatum' => $kremation->eingangsdatum?->format('Y-m-d'),
             'gewicht' => $kremation->gewicht,
-            'timestamp' => now()->toIso8601String(),
+            'timestamp' => now()->format('c'), // ISO 8601 format
         ];
 
         return json_encode($data, JSON_UNESCAPED_UNICODE);

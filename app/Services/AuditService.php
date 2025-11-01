@@ -21,8 +21,8 @@ class AuditService
      * @param string $action The action type
      * @param string $table The table name
      * @param int $recordId The record ID
-     * @param array|null $oldValue The old values (JSON)
-     * @param array|null $newValue The new values (JSON)
+     * @param array<string, mixed>|null $oldValue The old values (JSON)
+     * @param array<string, mixed>|null $newValue The new values (JSON)
      * @param string|null $ipAddress The IP address
      */
     public function log(
