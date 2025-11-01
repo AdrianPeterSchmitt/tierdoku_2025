@@ -9,7 +9,8 @@ require __DIR__ . '/vendor/autoload.php';
 
 // Define base_path helper for Illuminate
 if (!function_exists('base_path')) {
-    function base_path($path = '') {
+    function base_path($path = '')
+    {
         return __DIR__ . ($path ? '/' . ltrim($path, '/') : '');
     }
 }

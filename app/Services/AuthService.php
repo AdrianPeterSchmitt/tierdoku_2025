@@ -9,14 +9,14 @@ use App\Models\LoginAttempt;
 
 /**
  * Authentication Service
- * 
+ *
  * Handles user authentication and session management
  */
 class AuthService
 {
     /**
      * Login user
-     * 
+     *
      * @param string $username
      * @param string $password
      * @param string $ipAddress
@@ -41,12 +41,12 @@ class AuthService
         // Verify password
         if (!password_verify($password, $user->password_hash)) {
             $user->failed_login_attempts++;
-            
+
             // Lock after 5 failed attempts
             if ($user->failed_login_attempts >= 5) {
                 $user->lockAccount(15);
             }
-            
+
             $user->save();
             return false;
         }
@@ -71,7 +71,7 @@ class AuthService
 
     /**
      * Logout user
-     * 
+     *
      * @return void
      */
     public function logout(): void
@@ -82,7 +82,7 @@ class AuthService
 
     /**
      * Get current user from session
-     * 
+     *
      * @return User|null
      */
     public function currentUser(): ?User
@@ -96,7 +96,7 @@ class AuthService
 
     /**
      * Check if user is logged in
-     * 
+     *
      * @return bool
      */
     public function check(): bool
@@ -106,14 +106,14 @@ class AuthService
 
     /**
      * Check if user has permission
-     * 
+     *
      * @param string $permission
      * @return bool
      */
     public function can(string $permission): bool
     {
         $user = $this->currentUser();
-        
+
         if (!$user) {
             return false;
         }
@@ -123,7 +123,7 @@ class AuthService
 
     /**
      * Generate password reset token
-     * 
+     *
      * @param string $email
      * @return string
      */
@@ -146,7 +146,7 @@ class AuthService
 
     /**
      * Reset password using token
-     * 
+     *
      * @param string $token
      * @param string $newPassword
      * @return bool
@@ -171,14 +171,14 @@ class AuthService
 
     /**
      * Unlock user account
-     * 
+     *
      * @param int $userId
      * @return void
      */
     public function unlockUser(int $userId): void
     {
         $user = User::find($userId);
-        
+
         if ($user) {
             $user->unlockAccount();
         }
@@ -186,7 +186,7 @@ class AuthService
 
     /**
      * Extend session (for session timeout warning)
-     * 
+     *
      * @return void
      */
     public function extendSession(): void
@@ -198,7 +198,7 @@ class AuthService
 
     /**
      * Log login attempt
-     * 
+     *
      * @param string $username
      * @param string $ipAddress
      * @param bool $success
@@ -214,4 +214,3 @@ class AuthService
         ]);
     }
 }
-

@@ -16,14 +16,14 @@ class HerkunftController
 {
     /**
      * Display herkunft index
-     * 
+     *
      * @return string
      */
     public function index(): string
     {
         /** @var User $user */
         $user = $_REQUEST['_user'] ?? null;
-        
+
         // Get standorte for filter: filtered for non-admins
         if ($user && !$user->isAdmin()) {
             $standorte = $user->standorte()->where('aktiv', true)->orderBy('name')->get();
@@ -56,7 +56,7 @@ class HerkunftController
             }
         }
         $herkuenfte = $query->get();
-        
+
         // Calculate usage counts dynamically (like StandortController does)
         $herkuenfte = $herkuenfte->map(function ($herkunft) {
             $verwendungenCount = $herkunft->kremations()->count();
@@ -74,7 +74,7 @@ class HerkunftController
 
     /**
      * Get herkunft data for editing
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return string
      */
@@ -147,7 +147,7 @@ class HerkunftController
 
     /**
      * Update a herkunft
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return string
      */
@@ -188,7 +188,7 @@ class HerkunftController
 
     /**
      * Delete a herkunft
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return string
      */
@@ -221,7 +221,7 @@ class HerkunftController
 
     /**
      * Get herkunfte by standort name (API endpoint)
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return void
      */
@@ -278,5 +278,3 @@ class HerkunftController
         ]);
     }
 }
-
-

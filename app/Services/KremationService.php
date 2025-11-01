@@ -14,7 +14,7 @@ use InvalidArgumentException;
 
 /**
  * Kremation Service
- * 
+ *
  * Handles business logic for kremations
  */
 class KremationService
@@ -27,7 +27,7 @@ class KremationService
 
     /**
      * Validate kremation data
-     * 
+     *
      * @param array<string, mixed> $data
      * @return array<string>
      */
@@ -39,11 +39,11 @@ class KremationService
         if (empty($data['Standort'] ?? '')) {
             $errors[] = 'Standort ist erforderlich.';
         }
-        
+
         if (empty($data['Herkunft'] ?? '')) {
             $errors[] = 'Herkunft ist erforderlich.';
         }
-        
+
         if (empty($data['Gewicht'] ?? '')) {
             $errors[] = 'Gewicht ist erforderlich.';
         }
@@ -59,7 +59,7 @@ class KremationService
         }
 
         // Animal count validation
-        $totalAnimals = 
+        $totalAnimals =
             max(0, (int) ($data['Anzahl_Vogel'] ?? 0)) +
             max(0, (int) ($data['Anzahl_Heimtier'] ?? 0)) +
             max(0, (int) ($data['Anzahl_Katze'] ?? 0)) +
@@ -74,7 +74,7 @@ class KremationService
 
     /**
      * Create a new kremation
-     * 
+     *
      * @param array<string, mixed> $data
      * @param User $user The user creating the kremation
      * @return Kremation
@@ -96,12 +96,12 @@ class KremationService
             }
 
             $standortId = $standort->standort_id;
-            
+
             // Validate user has access to this standort
             if (!$user->isAdmin() && !$user->hasStandort($standortId)) {
                 throw new InvalidArgumentException('Kein Zugriff auf diesen Standort.');
             }
-            
+
             $nextVorgangsNr = Kremation::nextVorgangsNummer($standortId);
 
             // Get or create herkunft
@@ -146,16 +146,16 @@ class KremationService
             $syncData = [];
             foreach ($tierMap as $key => $bezeichnung) {
                 $anzahl = max(0, (int) ($data[$key] ?? 0));
-                
+
                 if ($anzahl > 0) {
                     $tierart = Tierart::where('bezeichnung', $bezeichnung)->first();
-                    
+
                     if ($tierart) {
                         $syncData[$tierart->tierart_id] = ['anzahl' => $anzahl];
                     }
                 }
             }
-            
+
             // Sync all tierarten at once
             $kremation->tierarten()->sync($syncData);
 
@@ -183,7 +183,7 @@ class KremationService
 
     /**
      * Update a field on a kremation
-     * 
+     *
      * @param Kremation $kremation
      * @param string $field
      * @param mixed $value
@@ -203,7 +203,7 @@ class KremationService
 
             if (isset($fieldMap[$field])) {
                 $dbField = $fieldMap[$field];
-                
+
                 if ($dbField === 'einaescherungsdatum' && $value !== null && strlen((string) $value) === 10) {
                     $value = $value . ' 00:00:00';
                 }
@@ -262,7 +262,7 @@ class KremationService
 
     /**
      * Update full kremation (all fields)
-     * 
+     *
      * @param Kremation $kremation
      * @param array<string, mixed> $data
      * @param User $user
@@ -339,16 +339,16 @@ class KremationService
             $syncData = [];
             foreach ($tierMap as $key => $bezeichnung) {
                 $anzahl = max(0, (int) ($data[$key] ?? 0));
-                
+
                 if ($anzahl > 0) {
                     $tierart = Tierart::where('bezeichnung', $bezeichnung)->first();
-                    
+
                     if ($tierart) {
                         $syncData[$tierart->tierart_id] = ['anzahl' => $anzahl];
                     }
                 }
             }
-            
+
             // Sync all tierarten at once
             $kremation->tierarten()->sync($syncData);
 
@@ -374,7 +374,7 @@ class KremationService
 
     /**
      * Complete a kremation
-     * 
+     *
      * @param Kremation $kremation
      * @param User $user
      * @return bool
@@ -406,7 +406,7 @@ class KremationService
 
     /**
      * Soft delete a kremation
-     * 
+     *
      * @param Kremation $kremation
      * @param User $user
      * @return bool
@@ -437,7 +437,7 @@ class KremationService
 
     /**
      * Restore a soft-deleted kremation
-     * 
+     *
      * @param int $id
      * @param User $user
      * @return bool
@@ -467,7 +467,7 @@ class KremationService
 
     /**
      * Bulk complete kremations
-     * 
+     *
      * @param array<int> $ids
      * @param User $user
      * @return int Number of completed kremations
@@ -502,7 +502,7 @@ class KremationService
 
     /**
      * Bulk delete kremations
-     * 
+     *
      * @param array<int> $ids
      * @param User $user
      * @return int Number of deleted kremations
@@ -537,7 +537,7 @@ class KremationService
 
     /**
      * Export kremations to CSV
-     * 
+     *
      * @param array<string, mixed> $filters
      * @param string $format
      * @return string CSV content
@@ -604,4 +604,3 @@ class KremationService
         }
     }
 }
-

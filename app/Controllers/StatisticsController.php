@@ -15,24 +15,8 @@ use Illuminate\Database\Eloquent\Collection;
 class StatisticsController
 {
     /**
-     * Get current user from session
-     */
-    private function getCurrentUser(): \App\Models\User
-    {
-        $user = $_REQUEST['_user'] ?? null;
-
-        if (!$user) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Not authenticated']);
-            exit;
-        }
-
-        return $user;
-    }
-
-    /**
      * Display statistics page
-     * 
+     *
      * @return string
      */
     public function index(): string
@@ -48,7 +32,7 @@ class StatisticsController
 
         // Apply standort filter using scope
         $query->forAllowedStandorte($user);
-        
+
         // Admin can also filter by specific standort
         if ($user->isAdmin() && !empty($_GET['standort_id'])) {
             $query->where('standort_id', $_GET['standort_id']);
@@ -98,6 +82,21 @@ class StatisticsController
             'currentHerkunft' => $_GET['herkunft_id'] ?? null,
             'user' => $user,
         ]);
+    }
+    /**
+     * Get current user from session
+     */
+    private function getCurrentUser(): \App\Models\User
+    {
+        $user = $_REQUEST['_user'] ?? null;
+
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Not authenticated']);
+            exit;
+        }
+
+        return $user;
     }
 
     /**
@@ -160,7 +159,7 @@ class StatisticsController
             }
         }
         arsort($byTierart);
-        $byTierart = collect($byTierart)->map(fn($count, $name) => ['name' => $name, 'count' => $count])->values();
+        $byTierart = collect($byTierart)->map(fn ($count, $name) => ['name' => $name, 'count' => $count])->values();
 
         // Timeline data (last 30 days)
         $timeline = [];
@@ -170,7 +169,7 @@ class StatisticsController
                 continue;
             }
             $date = date('Y-m-d', $timestamp);
-            $count = $kremations->filter(fn($k) => $k->eingangsdatum->format('Y-m-d') === $date)->count();
+            $count = $kremations->filter(fn ($k) => $k->eingangsdatum->format('Y-m-d') === $date)->count();
             $formatTimestamp = strtotime($date);
             $timeline[] = ['date' => $formatTimestamp !== false ? date('d.m', $formatTimestamp) : $date, 'count' => $count];
         }
@@ -188,4 +187,3 @@ class StatisticsController
         ];
     }
 }
-

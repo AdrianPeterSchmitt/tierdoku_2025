@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * LoginAttempt Model
- * 
+ *
  * @property int $id
  * @property string $username
  * @property string $ip_address
@@ -29,5 +29,3 @@ class LoginAttempt extends Model
         'success' => 'boolean',
     ];
 }
-
-

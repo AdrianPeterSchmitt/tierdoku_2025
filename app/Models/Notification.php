@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Notification Model
- * 
+ *
  * @property int $id
  * @property int $user_id
  * @property string $type
@@ -58,5 +58,3 @@ class Notification extends Model
         return $this->read_at !== null;
     }
 }
-
-

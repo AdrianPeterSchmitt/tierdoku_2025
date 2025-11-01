@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * User Model
- * 
+ *
  * @property int $id
  * @property string $username
  * @property string $name
@@ -101,7 +101,7 @@ class User extends Model
         ];
 
         $rolePermissions = $permissions[$this->role] ?? [];
-        
+
         return in_array('*', $rolePermissions) || in_array($permission, $rolePermissions);
     }
 
@@ -204,4 +204,3 @@ class User extends Model
         return $this->save();
     }
 }
-

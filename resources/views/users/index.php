@@ -169,10 +169,10 @@
                             <?php endif; ?>
                         </td>
                         <td class="px-4 py-3 text-sm">
-                            <?php 
+                            <?php
                             $standorteNames = $u->standorte->pluck('name')->toArray();
-                            echo htmlspecialchars(implode(', ', $standorteNames) ?: '-');
-                            ?>
+                        echo htmlspecialchars(implode(', ', $standorteNames) ?: '-');
+                        ?>
                         </td>
                         <td class="px-4 py-3 text-sm">
                             <div class="flex gap-1">

@@ -31,13 +31,13 @@
         <div class="flex justify-center bg-white p-4 rounded-lg">
             <?php
             $mimeType = $qrMimeType ?? 'image/png';
-            if ($mimeType === 'image/svg+xml') {
-                // SVG can be embedded directly or as base64
-                echo '<img src="data:image/svg+xml;base64,' . $qrBase64 . '" alt="QR-Code" class="w-64 h-64">';
-            } else {
-                echo '<img src="data:image/png;base64,' . $qrBase64 . '" alt="QR-Code" class="w-64 h-64">';
-            }
-            ?>
+    if ($mimeType === 'image/svg+xml') {
+        // SVG can be embedded directly or as base64
+        echo '<img src="data:image/svg+xml;base64,' . $qrBase64 . '" alt="QR-Code" class="w-64 h-64">';
+    } else {
+        echo '<img src="data:image/png;base64,' . $qrBase64 . '" alt="QR-Code" class="w-64 h-64">';
+    }
+    ?>
         </div>
 
         <!-- Info -->

@@ -18,7 +18,7 @@ class AuthController
 
     /**
      * Show login form
-     * 
+     *
      * @return string
      */
     public function loginForm(): string
@@ -33,7 +33,7 @@ class AuthController
 
     /**
      * Process login
-     * 
+     *
      * @return void
      */
     public function login(): void
@@ -73,7 +73,7 @@ class AuthController
 
     /**
      * Logout
-     * 
+     *
      * @return void
      */
     public function logout(): void
@@ -84,7 +84,7 @@ class AuthController
 
     /**
      * Extend session (for session timeout warning)
-     * 
+     *
      * @return void
      */
     public function extendSession(): void
@@ -102,4 +102,3 @@ class AuthController
         echo json_encode(['success' => true]);
     }
 }
-

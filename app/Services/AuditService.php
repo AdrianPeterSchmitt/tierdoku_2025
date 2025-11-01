@@ -9,14 +9,14 @@ use App\Models\AuditLog;
 
 /**
  * Audit Service
- * 
+ *
  * Handles audit logging for all data changes
  */
 class AuditService
 {
     /**
      * Log an action to audit trail
-     * 
+     *
      * @param User $user The user performing the action
      * @param string $action The action type
      * @param string $table The table name
@@ -48,7 +48,7 @@ class AuditService
 
     /**
      * Get change history for a record
-     * 
+     *
      * @param string $table The table name
      * @param int|string $recordId The record ID (int for most tables, string for kremation vorgangs_id)
      * @return \Illuminate\Support\Collection
@@ -62,4 +62,3 @@ class AuditService
             ->get();
     }
 }
-

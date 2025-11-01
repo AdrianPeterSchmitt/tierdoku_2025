@@ -10,17 +10,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Herkunft Model
- * 
+ *
  * @property int $herkunft_id
  * @property string $name
  * @property int $verwendungen_count
  */
 class Herkunft extends Model
 {
-    protected $table = 'herkunft';
-    protected $primaryKey = 'herkunft_id';
     public $incrementing = true;
     public $timestamps = true;
+    protected $table = 'herkunft';
+    protected $primaryKey = 'herkunft_id';
 
     protected $fillable = [
         'name',
@@ -54,4 +54,3 @@ class Herkunft extends Model
         $this->save();
     }
 }
-

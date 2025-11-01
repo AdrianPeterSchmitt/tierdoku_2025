@@ -36,4 +36,3 @@ class AboutPageTest extends TestCase
         }
     }
 }
-

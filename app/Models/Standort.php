@@ -10,17 +10,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Standort Model
- * 
+ *
  * @property int $standort_id
  * @property string $name
  * @property bool $aktiv
  */
 class Standort extends Model
 {
-    protected $table = 'standort';
-    protected $primaryKey = 'standort_id';
     public $incrementing = true;
     public $timestamps = true;
+    protected $table = 'standort';
+    protected $primaryKey = 'standort_id';
 
     protected $fillable = [
         'name',
@@ -59,7 +59,7 @@ class Standort extends Model
 
     /**
      * Scope: nur aktive Standorte
-     * 
+     *
      * @param \Illuminate\Database\Eloquent\Builder<Standort> $query
      * @return \Illuminate\Database\Eloquent\Builder<Standort>
      */
@@ -70,26 +70,25 @@ class Standort extends Model
 
     /**
      * Get prefix for vorgangs_id (first 3 letters, uppercase)
-     * 
+     *
      * @return string
      */
     public function getPrefix(): string
     {
         $name = trim($this->name);
-        
+
         if (empty($name)) {
             return 'XXX'; // Fallback for empty names
         }
-        
+
         // Extract first 3 letters, convert to uppercase
         $prefix = strtoupper(substr($name, 0, 3));
-        
+
         // Pad with X if name is shorter than 3 characters
         if (strlen($prefix) < 3) {
             $prefix = str_pad($prefix, 3, 'X', STR_PAD_RIGHT);
         }
-        
+
         return $prefix;
     }
 }
-

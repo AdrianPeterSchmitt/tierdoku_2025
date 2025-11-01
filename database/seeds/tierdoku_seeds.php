@@ -2,7 +2,7 @@
 
 /**
  * Tierdoku Seed Data
- * 
+ *
  * Run with: php seed.php tierdoku
  */
 
@@ -33,10 +33,10 @@ return function () {
     // Admin-User (falls noch nicht vorhanden)
     echo "Seeding Admin-User...\n";
     $adminExists = Capsule::table('users')->where('username', 'admin')->exists();
-    
+
     if (!$adminExists && Capsule::table('standort')->count() > 0) {
         $firstStandort = Capsule::table('standort')->first();
-        
+
         Capsule::table('users')->insert([
             'username' => 'admin',
             'name' => 'Administrator',
@@ -54,4 +54,3 @@ return function () {
 
     echo "✅ Seed-Daten erfolgreich eingefügt!\n";
 };
-

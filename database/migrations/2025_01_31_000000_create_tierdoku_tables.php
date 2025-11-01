@@ -2,7 +2,7 @@
 
 /**
  * Create Tierdoku System Tables
- * 
+ *
  * Run with: php migrate.php
  */
 
@@ -83,7 +83,7 @@ return function ($schema) {
         $table->json('new_value')->nullable();
         $table->string('ip_address')->nullable();
         $table->timestamp('created_at')->useCurrent();
-        
+
         $table->index(['table_name', 'record_id']);
     });
 
@@ -96,7 +96,7 @@ return function ($schema) {
         $table->text('message');
         $table->timestamp('read_at')->nullable();
         $table->timestamps();
-        
+
         $table->index('user_id');
         $table->index('read_at');
     });
@@ -108,9 +108,8 @@ return function ($schema) {
         $table->string('ip_address');
         $table->boolean('success')->default(false);
         $table->timestamp('created_at')->useCurrent();
-        
+
         $table->index(['username', 'created_at']);
         $table->index(['ip_address', 'created_at']);
     });
 };
-

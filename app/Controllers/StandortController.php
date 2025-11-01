@@ -16,20 +16,20 @@ class StandortController
 {
     /**
      * Display standort index
-     * 
+     *
      * @return string
      */
     public function index(): string
     {
         /** @var User $user */
         $user = $_REQUEST['_user'] ?? null;
-        
+
         if (!$user) {
             http_response_code(401);
             redirect('/login');
             exit;
         }
-        
+
         if (!$user->isAdmin() && !$user->isManager()) {
             http_response_code(403);
             $message = 'Keine Berechtigung für Standort-Verwaltung';
@@ -43,12 +43,12 @@ class StandortController
             $kremationsCount = $standort->kremations()->count();
             $usersCount = $standort->users()->count();
             $herkunftCount = Herkunft::where('standort_id', $standort->standort_id)->count();
-            
+
             $standort->verwendungen_count = $kremationsCount + $usersCount + $herkunftCount;
             $standort->kremations_count = $kremationsCount;
             $standort->users_count = $usersCount;
             $standort->herkunft_count = $herkunftCount;
-            
+
             return $standort;
         });
 
@@ -60,7 +60,7 @@ class StandortController
 
     /**
      * Get standort data for editing
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return string
      */
@@ -95,7 +95,7 @@ class StandortController
 
     /**
      * Store a new standort
-     * 
+     *
      * @return string
      */
     public function store(): string
@@ -136,7 +136,7 @@ class StandortController
 
     /**
      * Update a standort
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return string
      */
@@ -157,7 +157,7 @@ class StandortController
         }
 
         $name = trim($_POST['name'] ?? $s->name);
-        
+
         // Check if name is being changed
         if ($name !== $s->name) {
             $exists = Standort::where('name', $name)
@@ -182,7 +182,7 @@ class StandortController
 
     /**
      * Delete a standort
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return string
      */
@@ -210,11 +210,17 @@ class StandortController
         if ($hasKremations || $hasUsers || $hasHerkunft) {
             http_response_code(409);
             $reasons = [];
-            if ($hasKremations) $reasons[] = 'Kremationen';
-            if ($hasUsers) $reasons[] = 'Benutzer';
-            if ($hasHerkunft) $reasons[] = 'Herkünfte';
+            if ($hasKremations) {
+                $reasons[] = 'Kremationen';
+            }
+            if ($hasUsers) {
+                $reasons[] = 'Benutzer';
+            }
+            if ($hasHerkunft) {
+                $reasons[] = 'Herkünfte';
+            }
             return (string) json_encode([
-                'success' => false, 
+                'success' => false,
                 'error' => 'Standort in Verwendung (' . implode(', ', $reasons) . ')'
             ]);
         }
@@ -223,4 +229,3 @@ class StandortController
         return (string) json_encode(['success' => true]);
     }
 }
-

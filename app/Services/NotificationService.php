@@ -9,14 +9,14 @@ use App\Models\Notification;
 
 /**
  * Notification Service
- * 
+ *
  * Handles user notifications
  */
 class NotificationService
 {
     /**
      * Create a notification for a user
-     * 
+     *
      * @param User $user The target user
      * @param string $type The notification type (info, warning, success, error)
      * @param string $title The notification title
@@ -34,7 +34,7 @@ class NotificationService
 
     /**
      * Mark notification as read
-     * 
+     *
      * @param int $notificationId The notification ID
      */
     public function markAsRead(int $notificationId): void
@@ -47,7 +47,7 @@ class NotificationService
 
     /**
      * Get unread notifications for a user
-     * 
+     *
      * @param User $user The user
      * @return \Illuminate\Support\Collection
      */
@@ -61,7 +61,7 @@ class NotificationService
 
     /**
      * Get unread count for a user
-     * 
+     *
      * @param User $user The user
      * @return int
      */
@@ -74,7 +74,7 @@ class NotificationService
 
     /**
      * Mark all notifications as read for a user
-     * 
+     *
      * @param User $user The user
      */
     public function markAllAsRead(User $user): void
@@ -84,4 +84,3 @@ class NotificationService
             ->update(['read_at' => now()]);
     }
 }
-

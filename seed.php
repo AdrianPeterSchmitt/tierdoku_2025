@@ -63,15 +63,13 @@ echo "🌱 Running seed: {$seedName}\n";
 
 try {
     $seed = require $seedFile;
-    
+
     if (is_callable($seed)) {
         $seed();
     }
-    
+
     echo "✨ Seed completed successfully!\n";
 } catch (Exception $e) {
     echo "❌ Error: " . $e->getMessage() . "\n";
     exit(1);
 }
-
-

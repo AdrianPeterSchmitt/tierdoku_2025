@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * AuditLog Model
- * 
+ *
  * @property int $id
  * @property int $user_id
  * @property string $action
@@ -21,9 +21,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AuditLog extends Model
 {
-    protected $table = 'audit_log';
-    
     public $timestamps = false;
+    protected $table = 'audit_log';
 
     protected $fillable = [
         'user_id',
@@ -49,5 +48,3 @@ class AuditLog extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 }
-
-

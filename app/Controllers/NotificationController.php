@@ -19,7 +19,7 @@ class NotificationController
 
     /**
      * Get unread count
-     * 
+     *
      * @return void
      */
     public function unreadCount(): void
@@ -39,5 +39,3 @@ class NotificationController
         echo json_encode(['count' => $count]);
     }
 }
-
-

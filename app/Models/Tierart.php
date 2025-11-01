@@ -9,16 +9,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Tierart Model
- * 
+ *
  * @property int $tierart_id
  * @property string $bezeichnung
  */
 class Tierart extends Model
 {
-    protected $table = 'tierart';
-    protected $primaryKey = 'tierart_id';
     public $incrementing = true;
     public $timestamps = false;
+    protected $table = 'tierart';
+    protected $primaryKey = 'tierart_id';
 
     protected $fillable = [
         'bezeichnung',
@@ -37,4 +37,3 @@ class Tierart extends Model
         )->withPivot('anzahl');
     }
 }
-

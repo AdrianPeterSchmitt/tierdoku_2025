@@ -18,6 +18,7 @@ use Endroid\QrCode\Writer\SvgWriter;
  */
 class QRCodeService
 {
+    private string $lastMimeType = 'image/png';
     /**
      * Generate QR code for a Kremation
      *
@@ -81,8 +82,6 @@ class QRCodeService
     {
         return $this->lastMimeType ?? 'image/png';
     }
-
-    private string $lastMimeType = 'image/png';
 
     /**
      * Save QR code as file
@@ -179,5 +178,3 @@ class QRCodeService
         return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 }
-
-

@@ -96,10 +96,10 @@
                             // For non-admins: select default standort or first standort
                             // For admins: no default selection
                             $isSelected = false;
-                            if (!$user->isAdmin() && isset($defaultStandortId) && $defaultStandortId == $s->standort_id) {
-                                $isSelected = true;
-                            }
-                            ?>
+                                if (!$user->isAdmin() && isset($defaultStandortId) && $defaultStandortId == $s->standort_id) {
+                                    $isSelected = true;
+                                }
+                                ?>
                             <option value="<?= htmlspecialchars($s->name) ?>" <?= $isSelected ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($s->name) ?>
                             </option>
@@ -294,8 +294,8 @@
                                 <?= htmlspecialchars($k->standort->name ?? '') ?>
                             </td>
                             <?php
-                            // Create map of tierarten for easy lookup
-                            $tierartenMap = [];
+                                // Create map of tierarten for easy lookup
+                                $tierartenMap = [];
                             foreach ($k->tierarten as $tierart) {
                                 $tierartenMap[$tierart->bezeichnung] = $tierart->pivot->anzahl ?? 0;
                             }
@@ -397,7 +397,7 @@ function kremationApp() {
             $defaultStandort = $standorte->firstWhere('standort_id', $defaultStandortId);
             echo $defaultStandort ? htmlspecialchars($defaultStandort->name) : '';
         }
-        ?>',
+    ?>',
         herkunft: localStorage.getItem('lastHerkunft') || '',
         availableHerkunfte: [],
         loadingHerkunfte: false,
@@ -702,11 +702,11 @@ function kremationApp() {
             
             // Reset Alpine.js models
             this.standort = localStorage.getItem('lastStandort') || '<?php
-            if (!$user->isAdmin() && isset($defaultStandortId) && $defaultStandortId) {
-                $defaultStandort = $standorte->firstWhere('standort_id', $defaultStandortId);
-                echo $defaultStandort ? htmlspecialchars($defaultStandort->name) : '';
-            }
-            ?>';
+        if (!$user->isAdmin() && isset($defaultStandortId) && $defaultStandortId) {
+            $defaultStandort = $standorte->firstWhere('standort_id', $defaultStandortId);
+            echo $defaultStandort ? htmlspecialchars($defaultStandort->name) : '';
+        }
+    ?>';
             this.herkunft = localStorage.getItem('lastHerkunft') || '';
             
             // Reload herkunfte if standort is set

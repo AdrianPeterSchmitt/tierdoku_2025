@@ -46,6 +46,52 @@ class PDFLabelService
     }
 
     /**
+     * Generate PDF label with embedded QR code
+     *
+     * @param Kremation $kremation
+     * @param string $qrCodeBase64 Base64 encoded QR code image
+     * @param string $qrMimeType MIME type of the QR code (image/png or image/svg+xml)
+     * @return string PDF content as binary string
+     */
+    public function generateLabelWithQR(Kremation $kremation, string $qrCodeBase64, string $qrMimeType = 'image/png'): string
+    {
+        $html = $this->buildLabelHTML($kremation);
+
+        // Get QR code size from .env or use default
+        $qrCodeSizeMm = $_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60';
+
+        // Replace QR placeholder with actual QR code
+        $mimeType = $qrMimeType !== '' ? $qrMimeType : 'image/png';
+        $html = str_replace(
+            '<div style=\'width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;\'>
+                            Scannen Sie den QR-Code
+                            <br>für Details
+                        </div>',
+            '<img src="data:' . htmlspecialchars($mimeType) . ';base64,' . $qrCodeBase64 . '" style="width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm;">',
+            $html
+        );
+
+        // Get configuration from .env or use defaults
+        $paperSize = $_ENV['PDF_PAPER_SIZE'] ?? 'a4';
+        $paperOrientation = $_ENV['PDF_PAPER_ORIENTATION'] ?? 'portrait';
+        $fontFamily = 'DejaVu Sans'; // Keep default font
+
+        $options = new Options();
+        $options->set('defaultFont', $fontFamily);
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultPaperSize', $paperSize);
+        $options->set('defaultPaperOrientation', $paperOrientation);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper($paperSize, $paperOrientation);
+        $dompdf->render();
+
+        return $dompdf->output();
+    }
+
+    /**
      * Build HTML for the label
      *
      * @param Kremation $kremation
@@ -57,14 +103,14 @@ class PDFLabelService
         $herkunft = $kremation->herkunft->name ?? 'Unbekannt';
         $eingangsdatum = $kremation->eingangsdatum?->format('d.m.Y') ?? 'N/A';
         $gewicht = number_format($kremation->gewicht, 2, ',', '.');
-        
+
         // Get PDF configuration from .env or use defaults
         $labelBorderWidth = $_ENV['PDF_LABEL_BORDER_WIDTH'] ?? '3px';
         $fontSizeHeader = $_ENV['PDF_FONT_SIZE_HEADER'] ?? '36pt';
         $fontSizeBase = $_ENV['PDF_FONT_SIZE_BASE'] ?? '14pt';
         $qrCodeSizeMm = $_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60';
         $qrCodePaddingMm = $_ENV['PDF_QR_CODE_PADDING_MM'] ?? '5';
-        
+
         // Get tier counts
         $tierCounts = [];
         /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\Tierart> $tierarten */
@@ -237,52 +283,4 @@ class PDFLabelService
         </body>
         </html>";
     }
-
-    /**
-     * Generate PDF label with embedded QR code
-     *
-     * @param Kremation $kremation
-     * @param string $qrCodeBase64 Base64 encoded QR code image
-     * @param string $qrMimeType MIME type of the QR code (image/png or image/svg+xml)
-     * @return string PDF content as binary string
-     */
-    public function generateLabelWithQR(Kremation $kremation, string $qrCodeBase64, string $qrMimeType = 'image/png'): string
-    {
-        $html = $this->buildLabelHTML($kremation);
-
-        // Get QR code size from .env or use default
-        $qrCodeSizeMm = $_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60';
-
-        // Replace QR placeholder with actual QR code
-        $mimeType = $qrMimeType !== '' ? $qrMimeType : 'image/png';
-        $html = str_replace(
-            '<div style=\'width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;\'>
-                            Scannen Sie den QR-Code
-                            <br>für Details
-                        </div>',
-            '<img src="data:' . htmlspecialchars($mimeType) . ';base64,' . $qrCodeBase64 . '" style="width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm;">',
-            $html
-        );
-
-        // Get configuration from .env or use defaults
-        $paperSize = $_ENV['PDF_PAPER_SIZE'] ?? 'a4';
-        $paperOrientation = $_ENV['PDF_PAPER_ORIENTATION'] ?? 'portrait';
-        $fontFamily = 'DejaVu Sans'; // Keep default font
-
-        $options = new Options();
-        $options->set('defaultFont', $fontFamily);
-        $options->set('isRemoteEnabled', true);
-        $options->set('isHtml5ParserEnabled', true);
-        $options->set('defaultPaperSize', $paperSize);
-        $options->set('defaultPaperOrientation', $paperOrientation);
-
-        $dompdf = new Dompdf($options);
-        $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper($paperSize, $paperOrientation);
-        $dompdf->render();
-
-        return $dompdf->output();
-    }
 }
-
-

@@ -13,24 +13,8 @@ use InvalidArgumentException;
 class ConfigController
 {
     /**
-     * Get current user from session
-     */
-    private function getCurrentUser(): User
-    {
-        $user = $_REQUEST['_user'] ?? null;
-
-        if (!$user) {
-            http_response_code(401);
-            redirect('/login');
-            exit;
-        }
-
-        return $user;
-    }
-
-    /**
      * Display configuration page
-     * 
+     *
      * @return string
      */
     public function index(): string
@@ -54,7 +38,7 @@ class ConfigController
 
     /**
      * Update configuration
-     * 
+     *
      * @return void
      */
     public function update(): void
@@ -96,17 +80,32 @@ class ConfigController
             echo json_encode(['success' => false, 'error' => 'Fehler beim Speichern der Konfiguration']);
         }
     }
+    /**
+     * Get current user from session
+     */
+    private function getCurrentUser(): User
+    {
+        $user = $_REQUEST['_user'] ?? null;
+
+        if (!$user) {
+            http_response_code(401);
+            redirect('/login');
+            exit;
+        }
+
+        return $user;
+    }
 
     /**
      * Read .env file and parse values
-     * 
+     *
      * @param string $envFile
      * @return array<string, mixed>
      */
     private function readEnvFile(string $envFile): array
     {
         $config = [];
-        
+
         // Default values
         $defaults = [
             'APP_NAME' => 'Tierdokumentation',
@@ -136,28 +135,28 @@ class ConfigController
 
         if (file_exists($envFile)) {
             $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            
+
             if ($lines === false) {
                 return [];
             }
-            
+
             foreach ($lines as $line) {
                 $line = trim($line);
-                
+
                 // Skip comments
                 if (strpos($line, '#') === 0) {
                     continue;
                 }
-                
+
                 // Parse key=value pairs
                 if (strpos($line, '=') !== false) {
                     [$key, $value] = explode('=', $line, 2);
                     $key = trim($key);
                     $value = trim($value);
-                    
+
                     // Remove quotes if present
                     $value = trim($value, '"\'');
-                    
+
                     $config[$key] = $value;
                 }
             }
@@ -169,7 +168,7 @@ class ConfigController
 
     /**
      * Validate and collect parameters from POST
-     * 
+     *
      * @return array<string, string>
      */
     private function validateAndCollectParams(): array
@@ -178,12 +177,12 @@ class ConfigController
 
         // App configuration
         $params['APP_NAME'] = trim($_POST['APP_NAME'] ?? 'Tierdokumentation');
-        $params['APP_ENV'] = in_array($_POST['APP_ENV'] ?? 'production', ['production', 'local']) 
-            ? $_POST['APP_ENV'] 
+        $params['APP_ENV'] = in_array($_POST['APP_ENV'] ?? 'production', ['production', 'local'])
+            ? $_POST['APP_ENV']
             : 'production';
         $params['APP_DEBUG'] = isset($_POST['APP_DEBUG']) ? 'true' : 'false';
         $params['APP_TIMEZONE'] = trim($_POST['APP_TIMEZONE'] ?? 'Europe/Berlin');
-        
+
         // Validate timezone
         if (!in_array($params['APP_TIMEZONE'], timezone_identifiers_list())) {
             throw new InvalidArgumentException('Ungültige Zeitzone');
@@ -195,7 +194,7 @@ class ConfigController
             : 'mysql';
         $params['DB_HOST'] = trim($_POST['DB_HOST'] ?? 'localhost');
         $params['DB_PORT'] = (string) ((int) ($_POST['DB_PORT'] ?? 3306));
-        
+
         $params['DB_DATABASE'] = trim($_POST['DB_DATABASE'] ?? '');
         if (empty($params['DB_DATABASE'])) {
             throw new InvalidArgumentException('Datenbank-Name ist erforderlich');
@@ -213,7 +212,7 @@ class ConfigController
 
         // Session configuration
         $params['SESSION_SECURE'] = isset($_POST['SESSION_SECURE']) ? 'true' : 'false';
-        
+
         // Logging configuration
         $params['LOG_LEVEL'] = in_array($_POST['LOG_LEVEL'] ?? 'error', ['error', 'warning', 'info', 'debug'])
             ? $_POST['LOG_LEVEL']
@@ -241,7 +240,7 @@ class ConfigController
 
         // PDF Label configuration
         $params['PDF_PAPER_SIZE'] = trim($_POST['PDF_PAPER_SIZE'] ?? 'a4');
-        
+
         $params['PDF_PAPER_ORIENTATION'] = in_array(
             $_POST['PDF_PAPER_ORIENTATION'] ?? 'portrait',
             ['portrait', 'landscape']
@@ -268,7 +267,7 @@ class ConfigController
 
     /**
      * Write .env file
-     * 
+     *
      * @param string $envFile
      * @param array<string, string> $params
      * @return void
@@ -325,5 +324,3 @@ class ConfigController
         }
     }
 }
-
-

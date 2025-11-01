@@ -14,24 +14,8 @@ use InvalidArgumentException;
 class UserController
 {
     /**
-     * Get current user from session
-     */
-    private function getCurrentUser(): \App\Models\User
-    {
-        $user = $_REQUEST['_user'] ?? null;
-
-        if (!$user) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Not authenticated']);
-            exit;
-        }
-
-        return $user;
-    }
-
-    /**
      * Display user index
-     * 
+     *
      * @return string
      */
     public function index(): string
@@ -56,7 +40,7 @@ class UserController
 
     /**
      * Get user data for editing
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return void
      */
@@ -96,7 +80,7 @@ class UserController
 
     /**
      * Store a new user
-     * 
+     *
      * @return void
      */
     public function store(): void
@@ -137,7 +121,7 @@ class UserController
                     ->where('aktiv', true)
                     ->pluck('standort_id')
                     ->toArray();
-                
+
                 if (count($validStandorte) !== count($standortIds)) {
                     throw new InvalidArgumentException('Ungültige oder inaktive Standort-IDs.');
                 }
@@ -160,7 +144,7 @@ class UserController
             // Sync standorte
             if (!empty($standortIds)) {
                 $user->standorte()->sync($standortIds);
-                
+
                 // Set default_standort_id to first standort for non-admins
                 if (!$user->isAdmin()) {
                     $user->default_standort_id = $standortIds[0];
@@ -194,7 +178,7 @@ class UserController
 
     /**
      * Update a user
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return void
      */
@@ -263,7 +247,7 @@ class UserController
                         ->where('aktiv', true)
                         ->pluck('standort_id')
                         ->toArray();
-                    
+
                     if (count($validStandorte) !== count($standortIds)) {
                         throw new InvalidArgumentException('Ungültige oder inaktive Standort-IDs.');
                     }
@@ -322,7 +306,7 @@ class UserController
 
     /**
      * Delete a user
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return void
      */
@@ -375,5 +359,19 @@ class UserController
             ]);
         }
     }
-}
+    /**
+     * Get current user from session
+     */
+    private function getCurrentUser(): \App\Models\User
+    {
+        $user = $_REQUEST['_user'] ?? null;
 
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Not authenticated']);
+            exit;
+        }
+
+        return $user;
+    }
+}

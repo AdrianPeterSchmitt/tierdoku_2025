@@ -44,4 +44,3 @@ class RouterTest extends TestCase
         });
     }
 }
-

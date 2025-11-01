@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Kremation Model
- * 
+ *
  * @property string $vorgangs_id
  * @property string $eingangsdatum
  * @property float $gewicht
@@ -26,12 +26,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class Kremation extends Model
 {
-    use SoftDeletes;
+    public $incrementing = false; // String primary key
+    public $timestamps = true;
 
     protected $table = 'kremation';
     protected $primaryKey = 'vorgangs_id';
-    public $incrementing = false; // String primary key
-    public $timestamps = true;
 
     protected $fillable = [
         'eingangsdatum',
@@ -50,6 +49,60 @@ class Kremation extends Model
         'herkunft_id' => 'integer',
         'created_by' => 'integer',
     ];
+
+    /**
+     * Get next vorgangs number for a standort
+     */
+    /**
+     * Get next vorgangs number for a standort
+     * Format: {PREFIX}{NUMMER} (e.g. LAU001, SCH002)
+     *
+     * @param int $standortId
+     * @return string
+     */
+    public static function nextVorgangsNummer(int $standortId): string
+    {
+        // Get standort
+        $standort = Standort::find($standortId);
+        if (!$standort) {
+            throw new \InvalidArgumentException('Standort nicht gefunden');
+        }
+
+        // Get prefix from standort name
+        $prefix = $standort->getPrefix();
+
+        // Find all existing vorgangs_ids for this standort (that start with this prefix)
+        /** @var \Illuminate\Database\Eloquent\Builder<Kremation> $query */
+        $query = static::query();
+        $existingIds = $query->where('standort_id', $standortId)
+            ->withTrashed()
+            ->where('vorgangs_id', 'LIKE', $prefix . '%')
+            ->pluck('vorgangs_id')
+            ->toArray();
+
+        // Extract numbers and find highest
+        $maxNumber = 0;
+        foreach ($existingIds as $id) {
+            // Extract numeric part (after prefix)
+            if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', $id, $matches)) {
+                $number = (int) $matches[1];
+                if ($number > $maxNumber) {
+                    $maxNumber = $number;
+                }
+            }
+        }
+
+        // Next number
+        $nextNumber = $maxNumber + 1;
+
+        // Check max (999 per standort)
+        if ($nextNumber > 999) {
+            throw new \RuntimeException("Maximale Anzahl von 999 Kremationen pro Standort erreicht");
+        }
+
+        // Format: PREFIX + 3-digit number
+        return sprintf('%s%03d', $prefix, $nextNumber);
+    }
 
     /**
      * Get standort
@@ -90,7 +143,7 @@ class Kremation extends Model
 
     /**
      * Scope: Filter by standort
-     * 
+     *
      * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
      * @param int $standortId
      * @return \Illuminate\Database\Eloquent\Builder<Kremation>
@@ -102,7 +155,7 @@ class Kremation extends Model
 
     /**
      * Scope: Filter by allowed standorte for user
-     * 
+     *
      * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
      * @param User $user
      * @return \Illuminate\Database\Eloquent\Builder<Kremation>
@@ -112,18 +165,18 @@ class Kremation extends Model
         if ($user->isAdmin()) {
             return $query; // Kein Filter für Admins
         }
-        
+
         $allowedIds = $user->getAllowedStandortIds();
         if (empty($allowedIds)) {
             return $query->whereRaw('1 = 0'); // Keine Ergebnisse wenn keine Standorte
         }
-        
+
         return $query->whereIn('standort_id', $allowedIds);
     }
 
     /**
      * Scope: Search by vorgangs_id
-     * 
+     *
      * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
      * @param string $searchTerm
      * @return \Illuminate\Database\Eloquent\Builder<Kremation>
@@ -132,23 +185,23 @@ class Kremation extends Model
     {
         // Support both exact match and prefix search
         $searchTerm = trim($searchTerm);
-        
+
         if (empty($searchTerm)) {
             return $query->whereRaw('1 = 0'); // No results for empty search
         }
-        
+
         // Try exact match first
         $query->where(function ($q) use ($searchTerm) {
             $q->where('vorgangs_id', $searchTerm)
               ->orWhere('vorgangs_id', 'LIKE', $searchTerm . '%');
         });
-        
+
         return $query;
     }
 
     /**
      * Scope: Filter by herkunft
-     * 
+     *
      * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
      * @param int $herkunftId
      * @return \Illuminate\Database\Eloquent\Builder<Kremation>
@@ -160,7 +213,7 @@ class Kremation extends Model
 
     /**
      * Scope: Filter by status
-     * 
+     *
      * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
      * @param string $status
      * @return \Illuminate\Database\Eloquent\Builder<Kremation>
@@ -179,7 +232,7 @@ class Kremation extends Model
 
     /**
      * Scope: Filter by date range
-     * 
+     *
      * @param \Illuminate\Database\Eloquent\Builder<Kremation> $query
      * @param string $from
      * @param string $to
@@ -189,60 +242,6 @@ class Kremation extends Model
     {
         /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
         return $query->whereBetween('eingangsdatum', [$from, $to]);
-    }
-
-    /**
-     * Get next vorgangs number for a standort
-     */
-    /**
-     * Get next vorgangs number for a standort
-     * Format: {PREFIX}{NUMMER} (e.g. LAU001, SCH002)
-     * 
-     * @param int $standortId
-     * @return string
-     */
-    public static function nextVorgangsNummer(int $standortId): string
-    {
-        // Get standort
-        $standort = Standort::find($standortId);
-        if (!$standort) {
-            throw new \InvalidArgumentException('Standort nicht gefunden');
-        }
-        
-        // Get prefix from standort name
-        $prefix = $standort->getPrefix();
-        
-        // Find all existing vorgangs_ids for this standort (that start with this prefix)
-        /** @var \Illuminate\Database\Eloquent\Builder<Kremation> $query */
-        $query = static::query();
-        $existingIds = $query->where('standort_id', $standortId)
-            ->withTrashed()
-            ->where('vorgangs_id', 'LIKE', $prefix . '%')
-            ->pluck('vorgangs_id')
-            ->toArray();
-        
-        // Extract numbers and find highest
-        $maxNumber = 0;
-        foreach ($existingIds as $id) {
-            // Extract numeric part (after prefix)
-            if (preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', $id, $matches)) {
-                $number = (int) $matches[1];
-                if ($number > $maxNumber) {
-                    $maxNumber = $number;
-                }
-            }
-        }
-        
-        // Next number
-        $nextNumber = $maxNumber + 1;
-        
-        // Check max (999 per standort)
-        if ($nextNumber > 999) {
-            throw new \RuntimeException("Maximale Anzahl von 999 Kremationen pro Standort erreicht");
-        }
-        
-        // Format: PREFIX + 3-digit number
-        return sprintf('%s%03d', $prefix, $nextNumber);
     }
 
     /**
@@ -260,5 +259,5 @@ class Kremation extends Model
     {
         return $this->tierarten()->sum('anzahl');
     }
+    use SoftDeletes;
 }
-

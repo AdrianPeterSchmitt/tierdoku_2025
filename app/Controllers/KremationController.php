@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Services\KremationService;
-use App\Services\NotificationService;
 use App\Services\QRCodeService;
 use App\Services\PDFLabelService;
 use App\Models\Kremation;
 use App\Models\Standort;
-use App\Models\Herkunft;
 use App\Models\Tierart;
 use App\Models\User;
 use InvalidArgumentException;
@@ -28,24 +26,8 @@ class KremationController
     }
 
     /**
-     * Get current user from session
-     */
-    private function getCurrentUser(): User
-    {
-        $user = $_REQUEST['_user'] ?? null;
-
-        if (!$user) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Not authenticated']);
-            exit;
-        }
-
-        return $user;
-    }
-
-    /**
      * Display kremation index page
-     * 
+     *
      * @return string
      */
     public function index(): string
@@ -69,7 +51,7 @@ class KremationController
 
         // Apply standort filter using scope
         $query->forAllowedStandorte($user);
-        
+
         // Admin can also filter by specific standort
         if ($user->isAdmin() && !empty($_GET['standort'])) {
             $query->forStandort((int) $_GET['standort']);
@@ -106,14 +88,14 @@ class KremationController
         // For nextVorgangsNummer, use default standort or first allowed standort
         $defaultStandortId = $user->getDefaultStandortId();
         $nextNr = $defaultStandortId ? Kremation::nextVorgangsNummer($defaultStandortId) : '';
-        
+
         // Get standorte for form: filtered for non-admins
         if ($user->isAdmin()) {
             $standorte = Standort::aktiv()->get();
         } else {
             $standorte = $user->standorte()->where('aktiv', true)->get();
         }
-        
+
         // Herkünfte werden jetzt dynamisch via API geladen, nicht mehr initial
         $tierarten = Tierart::all();
 
@@ -136,7 +118,7 @@ class KremationController
 
     /**
      * Get updates since a specific timestamp
-     * 
+     *
      * @return void
      */
     public function getUpdates(): void
@@ -227,7 +209,7 @@ class KremationController
 
     /**
      * Store a new kremation
-     * 
+     *
      * @return void
      */
     public function store(): void
@@ -254,12 +236,12 @@ class KremationController
             http_response_code(500);
             // Log the actual error for debugging
             error_log('Kremation store error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-            
+
             // In development, show actual error message
-            $errorMessage = ($_ENV['APP_DEBUG'] ?? false) 
-                ? $e->getMessage() 
+            $errorMessage = ($_ENV['APP_DEBUG'] ?? false)
+                ? $e->getMessage()
                 : 'Ein Fehler ist aufgetreten.';
-                
+
             echo json_encode([
                 'success' => false,
                 'error' => $errorMessage,
@@ -269,7 +251,7 @@ class KremationController
 
     /**
      * Update full kremation (all fields)
-     * 
+     *
      * @param array<string, mixed> $vars
      * @return void
      */
@@ -309,11 +291,11 @@ class KremationController
         } catch (\Exception $e) {
             http_response_code(500);
             error_log('Kremation updateFull error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-            
-            $errorMessage = ($_ENV['APP_DEBUG'] ?? false) 
-                ? $e->getMessage() 
+
+            $errorMessage = ($_ENV['APP_DEBUG'] ?? false)
+                ? $e->getMessage()
                 : 'Ein Fehler ist aufgetreten.';
-                
+
             echo json_encode([
                 'success' => false,
                 'error' => $errorMessage,
@@ -323,7 +305,7 @@ class KremationController
 
     /**
      * Update a kremation field
-     * 
+     *
      * @return void
      */
     public function update(): void
@@ -371,7 +353,7 @@ class KremationController
 
     /**
      * Complete a kremation
-     * 
+     *
      * @return void
      */
     public function complete(): void
@@ -418,7 +400,7 @@ class KremationController
 
     /**
      * Delete a kremation
-     * 
+     *
      * @return void
      */
     public function delete(): void
@@ -464,7 +446,7 @@ class KremationController
 
     /**
      * Restore a soft-deleted kremation
-     * 
+     *
      * @param array<string, int> $vars
      * @return void
      */
@@ -504,7 +486,7 @@ class KremationController
 
     /**
      * Export kremations as CSV
-     * 
+     *
      * @return void
      */
     public function export(): void
@@ -570,15 +552,15 @@ class KremationController
         } catch (\Throwable $e) {
             // Log error and show debug info if enabled
             error_log('QR Code Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-            
+
             http_response_code(500);
-            
+
             if ($_ENV['APP_DEBUG'] ?? false) {
                 return '<pre>QR Code Error: ' . htmlspecialchars($e->getMessage()) . "\n" .
                        'File: ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n" .
                        htmlspecialchars($e->getTraceAsString()) . '</pre>';
             }
-            
+
             return view('errors/500');
         }
     }
@@ -699,5 +681,20 @@ class KremationController
         header('Content-Disposition: attachment; filename="kremation_' . $kremation->vorgangs_id . '.pdf"');
         echo $pdfContent;
     }
-}
 
+    /**
+     * Get current user from session
+     */
+    private function getCurrentUser(): User
+    {
+        $user = $_REQUEST['_user'] ?? null;
+
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Not authenticated']);
+            exit;
+        }
+
+        return $user;
+    }
+}
