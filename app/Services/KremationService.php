@@ -204,15 +204,23 @@ class KremationService
             if (isset($fieldMap[$field])) {
                 $dbField = $fieldMap[$field];
 
-                if ($dbField === 'einaescherungsdatum' && $value !== null && strlen((string) $value) === 10) {
-                    $value = $value . ' 00:00:00';
-                }
-
-                if ($dbField === 'gewicht') {
+                if ($dbField === 'einaescherungsdatum') {
+                    // Allow clearing the date by setting it to null or empty string
+                    if ($value === null || $value === '' || trim((string) $value) === '') {
+                        $kremation->einaescherungsdatum = null;
+                    } elseif (strlen((string) $value) === 10) {
+                        $value = $value . ' 00:00:00';
+                        $kremation->einaescherungsdatum = $value;
+                    } else {
+                        $kremation->einaescherungsdatum = $value;
+                    }
+                } elseif ($dbField === 'gewicht') {
                     $value = (float) str_replace(',', '.', trim((string) $value));
+                    $kremation->$dbField = $value;
+                } else {
+                    $kremation->$dbField = $value;
                 }
-
-                $kremation->$dbField = $value;
+                
                 $kremation->save();
             } elseif ($field === 'Herkunft') {
                 $herkunftName = trim((string) $value);
@@ -314,14 +322,19 @@ class KremationService
             $kremation->standort_id = $standortId;
             $kremation->herkunft_id = $herkunftId;
 
-            // Update Einäscherungsdatum if provided
-            if (!empty($data['Einaescherungsdatum'])) {
+            // Update Einäscherungsdatum if provided, or clear it if empty
+            if (isset($data['Einaescherungsdatum'])) {
                 $einaescherungsdatum = trim($data['Einaescherungsdatum']);
-                // Convert from datetime-local format (YYYY-MM-DDTHH:mm) to datetime
-                if (strpos($einaescherungsdatum, 'T') !== false) {
-                    $kremation->einaescherungsdatum = str_replace('T', ' ', $einaescherungsdatum) . ':00';
+                if (empty($einaescherungsdatum)) {
+                    // Clear Einäscherungsdatum (set to null)
+                    $kremation->einaescherungsdatum = null;
                 } else {
-                    $kremation->einaescherungsdatum = $einaescherungsdatum;
+                    // Convert from datetime-local format (YYYY-MM-DDTHH:mm) to datetime
+                    if (strpos($einaescherungsdatum, 'T') !== false) {
+                        $kremation->einaescherungsdatum = str_replace('T', ' ', $einaescherungsdatum) . ':00';
+                    } else {
+                        $kremation->einaescherungsdatum = $einaescherungsdatum;
+                    }
                 }
             }
 

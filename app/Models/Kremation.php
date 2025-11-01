@@ -137,7 +137,9 @@ class Kremation extends Model
             Tierart::class,
             'kremation_tiere',
             'kremation_id',
-            'tierart_id'
+            'tierart_id',
+            'vorgangs_id', // Local key (primary key of this model)
+            'tierart_id'   // Related key (primary key of related model)
         )->withPivot('anzahl');
     }
 

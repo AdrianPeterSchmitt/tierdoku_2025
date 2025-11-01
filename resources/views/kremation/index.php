@@ -39,9 +39,9 @@
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <div class="flex items-center gap-4">
                     <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                        Tierkremationen
+                        Anonyme Tierkremationen
                     </h1>
-                    <span class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-lg font-bold text-sm">
+                    <span class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-lg font-bold text-sm" x-text="'#' + (nextNumber || '<?= $nextNr ?>')">
                         #<?= $nextNr ?>
                     </span>
                     <?php if (!$user->isAdmin()): ?>
@@ -183,7 +183,17 @@
                 
                 <!-- Einäscherungsdatum (nur im Edit-Modus) - Außerhalb des Grids für besseres Layout -->
                 <div x-show="isEditMode" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Kremation (Datum & Uhrzeit)</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-300">Kremation (Datum & Uhrzeit)</label>
+                        <button 
+                            type="button"
+                            @click="clearKremationDate()"
+                            class="px-3 py-1.5 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded transition"
+                            title="Kremation rückgängig machen (Status auf 'Offen' setzen)"
+                        >
+                            🔄 Rückgängig machen
+                        </button>
+                    </div>
                     <div class="flex flex-col sm:flex-row gap-3 max-w-2xl">
                         <div class="flex-1">
                             <input 
@@ -256,9 +266,28 @@
 
         <!-- Tabelle (simplified for now) -->
         <section class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur border border-gray-700/50 rounded-2xl p-6 shadow-2xl">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                📋 Letzte Einträge
-            </h2>
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    📋 Letzte Einträge
+                </h2>
+                
+                <!-- Standort Filter -->
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-300">Standort:</label>
+                    <select 
+                        id="standort-filter"
+                        onchange="applyStandortFilter(this.value)"
+                        class="px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none text-white text-sm"
+                    >
+                        <option value="">Alle Standorte</option>
+                        <?php foreach ($standorte as $s): ?>
+                        <option value="<?= $s->standort_id ?>" <?= (!empty($_GET['standort']) && (int)$_GET['standort'] === $s->standort_id) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($s->name) ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -295,9 +324,30 @@
                             </td>
                             <?php
                                 // Create map of tierarten for easy lookup
-                                $tierartenMap = [];
-                            foreach ($k->tierarten as $tierart) {
-                                $tierartenMap[$tierart->bezeichnung] = $tierart->pivot->anzahl ?? 0;
+                                $tierartenMap = ['Vogel' => 0, 'Heimtier' => 0, 'Katze' => 0, 'Hund' => 0];
+                            // Manually load tierarten via relationship (works better with string foreign keys)
+                            // Note: Eager loading with with('tierarten') doesn't work correctly with string keys,
+                            // so we use the relationship method directly
+                            $tierarten = $k->tierarten()->get();
+                            
+                            // Access tierarten with pivot data
+                            foreach ($tierarten as $tierart) {
+                                // Get anzahl from pivot
+                                $anzahl = 0;
+                                if ($tierart->pivot) {
+                                    // Try getAttribute first (most reliable for Eloquent pivot)
+                                    if (method_exists($tierart->pivot, 'getAttribute')) {
+                                        $anzahl = (int) $tierart->pivot->getAttribute('anzahl');
+                                    }
+                                    // Fallback to direct property access
+                                    if ($anzahl == 0 && isset($tierart->pivot->anzahl)) {
+                                        $anzahl = (int) $tierart->pivot->anzahl;
+                                    }
+                                }
+                                // Map by bezeichnung
+                                if (isset($tierartenMap[$tierart->bezeichnung])) {
+                                    $tierartenMap[$tierart->bezeichnung] = $anzahl;
+                                }
                             }
                             ?>
                             <td class="px-2 py-3 text-sm text-center font-mono w-12">
@@ -330,27 +380,27 @@
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-sm">
-                                <div class="flex gap-1">
-                                    <button 
-                                        @click="loadKremationForEdit('<?= htmlspecialchars($k->vorgangs_id) ?>')"
-                                        class="inline-block px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition text-xs"
-                                    >
-                                        ✏️ Bearbeiten
-                                    </button>
-                                    <?php if (!$k->einaescherungsdatum): ?>
+                                <div class="flex gap-2 items-center">
                                     <button 
                                         @click="completeKremation('<?= htmlspecialchars($k->vorgangs_id) ?>')"
-                                        class="inline-block px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded transition text-xs"
+                                        class="w-10 h-10 flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white rounded transition <?= $k->einaescherungsdatum ? 'opacity-50 cursor-not-allowed' : '' ?>"
                                         title="Kremation abschließen"
+                                        <?= $k->einaescherungsdatum ? 'disabled' : '' ?>
                                     >
-                                        ✅ Abschließen
+                                        ✅
                                     </button>
-                                    <?php endif; ?>
-                                    <a href="/kremation/<?= $k->vorgangs_id ?>/qr" target="_blank" class="inline-block px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition text-xs">
-                                        📱 QR
+                                    <button 
+                                        @click="loadKremationForEdit('<?= htmlspecialchars($k->vorgangs_id) ?>')"
+                                        class="w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded transition"
+                                        title="Bearbeiten"
+                                    >
+                                        ✏️
+                                    </button>
+                                    <a href="/kremation/<?= $k->vorgangs_id ?>/qr" target="_blank" class="w-10 h-10 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white rounded transition" title="QR-Code anzeigen">
+                                        📱
                                     </a>
-                                    <a href="/kremation/<?= $k->vorgangs_id ?>/label" class="inline-block px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition text-xs">
-                                        📄 PDF
+                                    <a href="/kremation/<?= $k->vorgangs_id ?>/label" class="w-10 h-10 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded transition" title="PDF herunterladen">
+                                        📄
                                     </a>
                                 </div>
                             </td>
@@ -401,6 +451,8 @@ function kremationApp() {
         herkunft: localStorage.getItem('lastHerkunft') || '',
         availableHerkunfte: [],
         loadingHerkunfte: false,
+        nextNumber: '<?= $nextNr ?>',
+        loadingNextNumber: false,
         tierCounts: {
             'Vogel': 0,
             'Heimtier': 0,
@@ -429,9 +481,12 @@ function kremationApp() {
                     localStorage.setItem('lastStandort', value);
                     // Load herkunfte for selected standort
                     this.loadHerkunfteForStandort(value);
+                    // Load next number for selected standort
+                    this.loadNextNumber();
                 } else {
                     this.availableHerkunfte = [];
                     this.herkunft = '';
+                    this.nextNumber = '';
                 }
             });
             
@@ -439,9 +494,10 @@ function kremationApp() {
                 if (value) localStorage.setItem('lastHerkunft', value);
             });
             
-            // Load initial herkunfte if standort is set
+            // Load initial herkunfte and next number if standort is set
             if (this.standort) {
                 this.loadHerkunfteForStandort(this.standort);
+                this.loadNextNumber();
             }
             
             // Handle form submission
@@ -579,6 +635,40 @@ function kremationApp() {
             return Object.values(this.tierCounts).reduce((sum, count) => sum + (count || 0), 0);
         },
         
+        async loadNextNumber() {
+            // Get standort name from x-model
+            const standortName = this.standort;
+            if (!standortName || standortName === '') {
+                this.nextNumber = '';
+                return;
+            }
+            
+            this.loadingNextNumber = true;
+            
+            try {
+                const encodedStandortName = encodeURIComponent(standortName);
+                const response = await fetch(`/api/kremation/next-number-by-name/${encodedStandortName}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.nextNumber) {
+                    this.nextNumber = data.nextNumber;
+                } else {
+                    console.error('Unexpected API response:', data);
+                    this.nextNumber = '';
+                }
+            } catch (error) {
+                console.error('Error loading next number:', error);
+                this.nextNumber = '';
+            } finally {
+                this.loadingNextNumber = false;
+            }
+        },
+        
         async loadKremationForEdit(id) {
             try {
                 // Extract data from table row
@@ -678,6 +768,19 @@ function kremationApp() {
                 this.message = 'Fehler beim Laden: ' + error.message;
                 this.messageType = 'error';
             }
+        },
+        
+        clearKremationDate() {
+            // Clear all Einäscherungsdatum inputs
+            const dateInput = document.getElementById('einaescherungsdatum-date');
+            const hourInput = document.getElementById('einaescherungsdatum-hour');
+            const minuteInput = document.getElementById('einaescherungsdatum-minute');
+            const hiddenInput = document.getElementById('einaescherungsdatum-hidden');
+            
+            if (dateInput) dateInput.value = '';
+            if (hourInput) hourInput.value = '';
+            if (minuteInput) minuteInput.value = '';
+            if (hiddenInput) hiddenInput.value = '';
         },
         
         resetForm() {
@@ -932,12 +1035,30 @@ function kremationApp() {
             const aktionenCell = document.createElement('td');
             aktionenCell.className = 'px-4 py-3 text-sm';
             const aktionenDiv = document.createElement('div');
-            aktionenDiv.className = 'flex gap-1';
+            aktionenDiv.className = 'flex gap-2 items-center';
+            
+            // Abschließen Button (immer anzeigen, als erster)
+            const abschliessenBtn = document.createElement('button');
+            const isCompleted = kremation.status === 'Abgeschlossen';
+            abschliessenBtn.className = 'w-10 h-10 flex items-center justify-center bg-purple-500 hover:bg-purple-600 text-white rounded transition' + (isCompleted ? ' opacity-50 cursor-not-allowed' : '');
+            abschliessenBtn.title = 'Kremation abschließen';
+            abschliessenBtn.textContent = '✅';
+            if (isCompleted) {
+                abschliessenBtn.disabled = true;
+            } else {
+                abschliessenBtn.onclick = (function(app, id) {
+                    return function() {
+                        app.completeKremation(id);
+                    };
+                })(this, kremation.vorgangs_id);
+            }
+            aktionenDiv.appendChild(abschliessenBtn);
             
             // Bearbeiten Button
             const bearbeitenBtn = document.createElement('button');
-            bearbeitenBtn.className = 'inline-block px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition text-xs';
-            bearbeitenBtn.textContent = '✏️ Bearbeiten';
+            bearbeitenBtn.className = 'w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded transition';
+            bearbeitenBtn.title = 'Bearbeiten';
+            bearbeitenBtn.textContent = '✏️';
             bearbeitenBtn.onclick = (function(app, id) {
                 return function() {
                     app.loadKremationForEdit(id);
@@ -945,33 +1066,21 @@ function kremationApp() {
             })(this, kremation.vorgangs_id);
             aktionenDiv.appendChild(bearbeitenBtn);
             
-            // Abschließen Button (nur wenn Offen)
-            if (kremation.status === 'Offen') {
-                const abschliessenBtn = document.createElement('button');
-                abschliessenBtn.className = 'inline-block px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white rounded transition text-xs';
-                abschliessenBtn.title = 'Kremation abschließen';
-                abschliessenBtn.textContent = '✅ Abschließen';
-                abschliessenBtn.onclick = (function(app, id) {
-                    return function() {
-                        app.completeKremation(id);
-                    };
-                })(this, kremation.vorgangs_id);
-                aktionenDiv.appendChild(abschliessenBtn);
-            }
-            
             // QR Link
             const qrLink = document.createElement('a');
             qrLink.href = `/kremation/${kremation.vorgangs_id}/qr`;
             qrLink.target = '_blank';
-            qrLink.className = 'inline-block px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded transition text-xs';
-            qrLink.textContent = '📱 QR';
+            qrLink.className = 'w-10 h-10 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white rounded transition';
+            qrLink.title = 'QR-Code anzeigen';
+            qrLink.textContent = '📱';
             aktionenDiv.appendChild(qrLink);
             
             // PDF Link
             const pdfLink = document.createElement('a');
             pdfLink.href = `/kremation/${kremation.vorgangs_id}/label`;
-            pdfLink.className = 'inline-block px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded transition text-xs';
-            pdfLink.textContent = '📄 PDF';
+            pdfLink.className = 'w-10 h-10 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded transition';
+            pdfLink.title = 'PDF herunterladen';
+            pdfLink.textContent = '📄';
             aktionenDiv.appendChild(pdfLink);
             
             aktionenCell.appendChild(aktionenDiv);
@@ -1188,6 +1297,17 @@ document.addEventListener('DOMContentLoaded', function() {
         attributeFilter: ['class', 'style', 'x-show']
     });
 });
+
+// Standort Filter Funktion
+function applyStandortFilter(standortId) {
+    const url = new URL(window.location);
+    if (standortId) {
+        url.searchParams.set('standort', standortId);
+    } else {
+        url.searchParams.delete('standort');
+    }
+    window.location.href = url.toString();
+}
 </script>
 
 </body>

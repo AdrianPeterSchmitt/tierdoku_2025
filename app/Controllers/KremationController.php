@@ -46,7 +46,9 @@ class KremationController
         $dateFrom = $_GET['from'] ?? '';
         $dateTo = $_GET['to'] ?? '';
 
-        // Build query
+        // Build query - ensure tierarten pivot data is loaded
+        // Note: withPivot('anzahl') is already defined in the relationship, 
+        // so it should be loaded automatically, but we're being explicit here
         $query = Kremation::with(['standort', 'herkunft', 'creator', 'tierarten']);
 
         // Apply standort filter using scope
@@ -140,8 +142,10 @@ class KremationController
                 }
             }
 
-            // Build query - same as index but filter by updated_at
-            $query = Kremation::with(['standort', 'herkunft', 'creator', 'tierarten']);
+            // Build query - same as index but filter by updated_at - ensure tierarten pivot data is loaded
+            $query = Kremation::with(['standort', 'herkunft', 'creator', 'tierarten' => function ($query) {
+                $query->withPivot('anzahl');
+            }]);
 
             // Apply standort filter using scope
             $query->forAllowedStandorte($user);
@@ -445,6 +449,107 @@ class KremationController
     }
 
     /**
+     * Get next vorgangs number for a standort by ID
+     *
+     * @param array<string, mixed> $vars
+     * @return void
+     */
+    public function getNextNumber(array $vars): void
+    {
+        $user = $this->getCurrentUser();
+        header('Content-Type: application/json');
+
+        try {
+            $standortId = (int) ($vars['standortId'] ?? 0);
+
+            if ($standortId <= 0) {
+                throw new InvalidArgumentException('Invalid standort ID');
+            }
+
+            // Check if user has access to this standort
+            if (!$user->isAdmin() && !$user->hasStandort($standortId)) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Insufficient permissions']);
+                return;
+            }
+
+            $nextNr = Kremation::nextVorgangsNummer($standortId);
+
+            echo json_encode([
+                'success' => true,
+                'nextNumber' => $nextNr,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            error_log('Kremation getNextNumber error: ' . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'error' => 'Fehler beim Abrufen der nächsten Nummer.',
+            ]);
+        }
+    }
+
+    /**
+     * Get next vorgangs number for a standort by name
+     *
+     * @param array<string, mixed> $vars
+     * @return void
+     */
+    public function getNextNumberByName(array $vars): void
+    {
+        $user = $this->getCurrentUser();
+        header('Content-Type: application/json');
+
+        try {
+            $standortName = urldecode($vars['standortName'] ?? '');
+
+            if (empty($standortName)) {
+                throw new InvalidArgumentException('Invalid standort name');
+            }
+
+            // Find standort by name
+            $standort = Standort::where('name', $standortName)->first();
+
+            if (!$standort) {
+                throw new InvalidArgumentException('Standort nicht gefunden');
+            }
+
+            // Check if user has access to this standort
+            if (!$user->isAdmin() && !$user->hasStandort($standort->standort_id)) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Insufficient permissions']);
+                return;
+            }
+
+            $nextNr = Kremation::nextVorgangsNummer($standort->standort_id);
+
+            echo json_encode([
+                'success' => true,
+                'nextNumber' => $nextNr,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            error_log('Kremation getNextNumberByName error: ' . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'error' => 'Fehler beim Abrufen der nächsten Nummer.',
+            ]);
+        }
+    }
+
+    /**
      * Restore a soft-deleted kremation
      *
      * @param array<string, int> $vars
@@ -652,7 +757,13 @@ class KremationController
     public function downloadLabel(array $vars): void
     {
         $user = $this->getCurrentUser();
-        $vorgangsId = (int) ($vars['id'] ?? 0);
+        $vorgangsId = (string) ($vars['id'] ?? '');
+
+        if (empty($vorgangsId)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Ungültige Vorgangs-ID']);
+            return;
+        }
 
         $kremation = Kremation::find($vorgangsId);
 
@@ -662,8 +773,8 @@ class KremationController
             return;
         }
 
-        // Check permissions
-        if (!$user->isAdmin() && $kremation->standort_id !== $user->standort_id) {
+        // Check permissions - use hasStandort for multi-location support
+        if (!$user->isAdmin() && !$user->hasStandort($kremation->standort_id)) {
             http_response_code(403);
             echo json_encode(['error' => 'Keine Berechtigung']);
             return;

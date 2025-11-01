@@ -28,6 +28,8 @@ return [
         '/herkunft' => [HerkunftController::class, 'index'],
         '/herkunft/{id}/edit' => [HerkunftController::class, 'edit'],
         '/api/herkunft/by-standort/{standortName}' => [HerkunftController::class, 'getByStandortName'],
+        '/api/kremation/next-number/{standortId}' => [KremationController::class, 'getNextNumber'],
+        '/api/kremation/next-number-by-name/{standortName}' => [KremationController::class, 'getNextNumberByName'],
         '/standort' => [StandortController::class, 'index'],
         '/standort/{id}/edit' => [StandortController::class, 'edit'],
         '/users' => [UserController::class, 'index'],

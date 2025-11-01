@@ -55,21 +55,44 @@ class PDFLabelService
      */
     public function generateLabelWithQR(Kremation $kremation, string $qrCodeBase64, string $qrMimeType = 'image/png'): string
     {
-        $html = $this->buildLabelHTML($kremation);
-
-        // Get QR code size from .env or use default
+        // Get paper size to determine QR code size before building HTML
+        $paperSize = strtolower($_ENV['PDF_PAPER_SIZE'] ?? 'a4');
+        $isSmallFormat = in_array($paperSize, ['a7', 'a6', 'a5']);
+        
+        // Get QR code size from .env or use default (adjusted for small formats)
         $qrCodeSizeMm = $_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60';
+        if ($isSmallFormat && ($_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60') === '60') {
+            $qrCodeSizeMm = '25';
+        }
+        
+        $html = $this->buildLabelHTML($kremation);
 
         // Replace QR placeholder with actual QR code
         $mimeType = $qrMimeType !== '' ? $qrMimeType : 'image/png';
-        $html = str_replace(
-            '<div style=\'width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;\'>
+        
+        // Build replacement with proper QR code image
+        $replacement = '<img src="data:' . htmlspecialchars($mimeType) . ';base64,' . $qrCodeBase64 . '" style="width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; display: block; max-width: 100%; object-fit: contain;">';
+        
+        // Try multiple replacement strategies
+        // Strategy 1: Exact match with the exact size from buildLabelHTML
+        $exactPlaceholder = '<div style=\'width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;\'>
                             Scannen Sie den QR-Code
                             <br>für Details
-                        </div>',
-            '<img src="data:' . htmlspecialchars($mimeType) . ';base64,' . $qrCodeBase64 . '" style="width: ' . htmlspecialchars($qrCodeSizeMm) . 'mm; height: ' . htmlspecialchars($qrCodeSizeMm) . 'mm;">',
-            $html
-        );
+                        </div>';
+        
+        if (strpos($html, $exactPlaceholder) !== false) {
+            $html = str_replace($exactPlaceholder, $replacement, $html);
+        } else {
+            // Strategy 2: Regex match - find div with width containing the size
+            $pattern = '/<div[^>]*style=[\'"][^\'"]*width:\s*' . preg_quote($qrCodeSizeMm, '/') . 'mm[^\'"]*[\'"][^>]*>.*?Scannen Sie den QR-Code.*?<\/div>/s';
+            $html = preg_replace($pattern, $replacement, $html);
+            
+            // Strategy 3: Fallback - find any div containing "Scannen Sie den QR-Code"
+            if (strpos($html, 'Scannen Sie den QR-Code') !== false) {
+                $flexiblePattern = '/<div[^>]*>.*?Scannen Sie den QR-Code.*?<\/div>/s';
+                $html = preg_replace($flexiblePattern, $replacement, $html, 1); // Replace only first occurrence
+            }
+        }
 
         // Get configuration from .env or use defaults
         $paperSize = $_ENV['PDF_PAPER_SIZE'] ?? 'a4';
@@ -105,11 +128,49 @@ class PDFLabelService
         $gewicht = number_format($kremation->gewicht, 2, ',', '.');
 
         // Get PDF configuration from .env or use defaults
+        $paperSize = strtolower($_ENV['PDF_PAPER_SIZE'] ?? 'a4');
         $labelBorderWidth = $_ENV['PDF_LABEL_BORDER_WIDTH'] ?? '3px';
         $fontSizeHeader = $_ENV['PDF_FONT_SIZE_HEADER'] ?? '36pt';
         $fontSizeBase = $_ENV['PDF_FONT_SIZE_BASE'] ?? '14pt';
         $qrCodeSizeMm = $_ENV['PDF_QR_CODE_SIZE_MM'] ?? '60';
         $qrCodePaddingMm = $_ENV['PDF_QR_CODE_PADDING_MM'] ?? '5';
+
+        // Adjust sizes based on paper size
+        $isSmallFormat = in_array($paperSize, ['a7', 'a6', 'a5']);
+        
+        if ($isSmallFormat) {
+            // Reduce padding and margins for small formats
+            $bodyPadding = '5mm';
+            $labelPadding = '4mm';
+            $headerMarginBottom = '3mm';
+            $rowMarginBottom = '2mm';
+            $footerMarginTop = '5mm';
+            $qrMargin = '3mm';
+            
+            // Scale down font sizes
+            if (empty($_ENV['PDF_FONT_SIZE_HEADER']) || $_ENV['PDF_FONT_SIZE_HEADER'] === '36pt') {
+                $fontSizeHeader = '16pt';
+            }
+            if (empty($_ENV['PDF_FONT_SIZE_BASE']) || $_ENV['PDF_FONT_SIZE_BASE'] === '14pt') {
+                $fontSizeBase = '8pt';
+            }
+            
+            // Reduce QR code size for small formats if using default
+            if (empty($_ENV['PDF_QR_CODE_SIZE_MM']) || $_ENV['PDF_QR_CODE_SIZE_MM'] === '60') {
+                $qrCodeSizeMm = '25';
+            }
+            if (empty($_ENV['PDF_QR_CODE_PADDING_MM']) || $_ENV['PDF_QR_CODE_PADDING_MM'] === '5') {
+                $qrCodePaddingMm = '2';
+            }
+        } else {
+            // Default sizes for A4 and larger
+            $bodyPadding = '20mm';
+            $labelPadding = '15mm';
+            $headerMarginBottom = '10mm';
+            $rowMarginBottom = '5mm';
+            $footerMarginTop = '15mm';
+            $qrMargin = '10mm';
+        }
 
         // Get tier counts
         $tierCounts = [];
@@ -148,14 +209,16 @@ class PDFLabelService
                 
                 body {
                     font-family: 'DejaVu Sans', Arial, sans-serif;
-                    padding: 20mm;
+                    padding: " . htmlspecialchars($bodyPadding) . ";
+                    margin: 0;
                 }
                 
                 .label {
                     width: 100%;
                     border: " . htmlspecialchars($labelBorderWidth) . " solid #000;
-                    padding: 15mm;
+                    padding: " . htmlspecialchars($labelPadding) . ";
                     page-break-after: always;
+                    box-sizing: border-box;
                 }
                 
                 .label:last-child {
@@ -163,38 +226,59 @@ class PDFLabelService
                 }
                 
                 .header {
-                    border-bottom: 3px solid #000;
-                    padding-bottom: 10mm;
-                    margin-bottom: 10mm;
+                    border-bottom: " . ($isSmallFormat ? '2px' : '3px') . " solid #000;
+                    padding-bottom: " . ($isSmallFormat ? '3mm' : '10mm') . ";
+                    margin-bottom: " . htmlspecialchars($headerMarginBottom) . ";
                     text-align: center;
                 }
                 
                 .header h1 {
                     font-size: " . htmlspecialchars($fontSizeHeader) . ";
                     font-weight: bold;
-                    margin-bottom: 5mm;
+                    margin-bottom: " . ($isSmallFormat ? '2mm' : '5mm') . ";
+                    line-height: 1.2;
                 }
                 
                 .header h2 {
-                    font-size: 24pt;
+                    font-size: " . ($isSmallFormat ? '12pt' : '24pt') . ";
                     font-weight: bold;
+                    line-height: 1.2;
                 }
                 
                 .content {
-                    display: table;
+                    " . ($isSmallFormat ? 'display: block;' : 'display: table;') . "
                     width: 100%;
                 }
                 
                 .row {
-                    display: table-row;
-                    margin-bottom: 5mm;
+                    " . ($isSmallFormat ? 'display: block; margin-bottom: ' . htmlspecialchars($rowMarginBottom) . ';' : 'display: table-row; margin-bottom: ' . htmlspecialchars($rowMarginBottom) . ';') . "
                 }
                 
-                .label-cell, .value-cell {
+                " . ($isSmallFormat ? 
+                ".label-cell, .value-cell {
+                    display: block;
+                    padding: 0.5mm 0;
+                    font-size: " . htmlspecialchars($fontSizeBase) . ";
+                    line-height: 1.4;
+                }
+                
+                .label-cell {
+                    font-weight: bold;
+                    margin-bottom: 0.5mm;
+                }
+                
+                .value-cell {
+                    border-bottom: 1px dotted #000;
+                    padding-bottom: 1mm;
+                    margin-bottom: " . htmlspecialchars($rowMarginBottom) . ";
+                }"
+                :
+                ".label-cell, .value-cell {
                     display: table-cell;
                     padding: 3mm 0;
                     font-size: " . htmlspecialchars($fontSizeBase) . ";
                     vertical-align: top;
+                    line-height: 1.3;
                 }
                 
                 .label-cell {
@@ -205,23 +289,25 @@ class PDFLabelService
                 .value-cell {
                     width: 60%;
                     border-bottom: 1px dotted #000;
-                }
+                }"
+                ) . "
                 
                 .footer {
-                    margin-top: 15mm;
-                    padding-top: 10mm;
-                    border-top: 2px solid #000;
+                    margin-top: " . htmlspecialchars($footerMarginTop) . ";
+                    padding-top: " . ($isSmallFormat ? '3mm' : '10mm') . ";
+                    border-top: " . ($isSmallFormat ? '1px' : '2px') . " solid #000;
                     text-align: center;
-                    font-size: 10pt;
+                    font-size: " . ($isSmallFormat ? '7pt' : '10pt') . ";
+                    line-height: 1.2;
                 }
                 
                 .large-text {
-                    font-size: 18pt;
+                    font-size: " . ($isSmallFormat ? '10pt' : '18pt') . ";
                 }
                 
                 .qr-code {
                     text-align: center;
-                    margin: 10mm 0;
+                    margin: " . htmlspecialchars($qrMargin) . " 0;
                 }
                 
                 .qr-code img {
@@ -233,40 +319,61 @@ class PDFLabelService
         <body>
             <div class='label'>
                 <div class='header'>
-                    <h1>ANIMEA Tierkrematorium</h1>
+                    <h1>animea™ Tierkrematorium</h1>
                     <h2>Kremations-Nr. #{$kremation->vorgangs_id}</h2>
                 </div>
                 
-                <div class='content'>
+                " . ($isSmallFormat ? 
+                "<div class='content'>
+                    <div class='row'>
+                        <div class='label-cell'><strong>Standort:</strong></div>
+                        <div class='value-cell'>{$standort}</div>
+                    </div>
+                    <div class='row'>
+                        <div class='label-cell'><strong>Eingangsdatum:</strong></div>
+                        <div class='value-cell'>{$eingangsdatum}</div>
+                    </div>
+                    <div class='row'>
+                        <div class='label-cell'><strong>Herkunft:</strong></div>
+                        <div class='value-cell'>{$herkunft}</div>
+                    </div>
+                    <div class='row'>
+                        <div class='label-cell'><strong>Gewicht:</strong></div>
+                        <div class='value-cell large-text'>{$gewicht} kg</div>
+                    </div>
+                    <div class='row'>
+                        <div class='label-cell'><strong>Tierarten:</strong></div>
+                        <div class='value-cell'>" . htmlspecialchars($tierartenStr ?: 'N/A') . "</div>
+                    </div>
+                </div>"
+                :
+                "<div class='content'>
                     <div class='row'>
                         <div class='label-cell'>Standort:</div>
                         <div class='value-cell'>{$standort}</div>
                     </div>
-                    
                     <div class='row'>
                         <div class='label-cell'>Eingangsdatum:</div>
                         <div class='value-cell'>{$eingangsdatum}</div>
                     </div>
-                    
                     <div class='row'>
                         <div class='label-cell'>Herkunft:</div>
                         <div class='value-cell'>{$herkunft}</div>
                     </div>
-                    
                     <div class='row'>
                         <div class='label-cell'>Gewicht:</div>
                         <div class='value-cell large-text'>{$gewicht} kg</div>
                     </div>
-                    
                     <div class='row'>
                         <div class='label-cell'>Tierarten:</div>
-                        <div class='value-cell'>" . ($tierarten ?: 'N/A') . "</div>
+                        <div class='value-cell'>" . htmlspecialchars($tierartenStr ?: 'N/A') . "</div>
                     </div>
-                </div>
+                </div>"
+                ) . "
                 
                 <div class='qr-code'>
-                    <p style='font-size: 10pt; margin-bottom: 3mm;'>QR-Code:</p>
-                    <div style='display: inline-block; padding: " . htmlspecialchars($qrCodePaddingMm) . "mm; background: #fff; border: 2px solid #000;'>
+                    <p style='font-size: " . ($isSmallFormat ? '7pt' : '10pt') . "; margin-bottom: " . ($isSmallFormat ? '2mm' : '3mm') . ";'>QR-Code:</p>
+                    <div style='display: inline-block; padding: " . htmlspecialchars($qrCodePaddingMm) . "mm; background: #fff; border: " . ($isSmallFormat ? '1px' : '2px') . " solid #000;'>
                         <!-- QR Code placeholder - actual QR code would be embedded as base64 image -->
                         <div style='width: " . htmlspecialchars($qrCodeSizeMm) . "mm; height: " . htmlspecialchars($qrCodeSizeMm) . "mm; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999;'>
                             Scannen Sie den QR-Code
@@ -276,7 +383,7 @@ class PDFLabelService
                 </div>
                 
                 <div class='footer'>
-                    <p>ANIMEA Tierkrematorium | {$standort}</p>
+                    <p>animea™ Tierkrematorium | {$standort}</p>
                     <p>Datum: " . now()->format('d.m.Y H:i') . "</p>
                 </div>
             </div>
