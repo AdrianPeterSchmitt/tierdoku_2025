@@ -33,7 +33,7 @@ Thumbs.db
 .phpunit.result.cache
 
 # Composer
-composer.lock
+# composer.lock - Should be committed for applications to ensure consistent dependencies
 
 # Temporary files
 *.tmp

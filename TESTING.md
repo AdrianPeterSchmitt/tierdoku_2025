@@ -13,7 +13,6 @@ Dieses Projekt verwendet mehrere QA-Tools für Code-Qualität und Zuverlässigke
 ```
 tests/
 ├── Unit/              # Unit Tests (isolierte Komponenten)
-│   ├── ExampleTest.php
 │   ├── RouterTest.php
 │   └── ViewHelperTest.php
 ├── Feature/           # Feature/E2E Tests (komplette Features)
@@ -45,7 +44,7 @@ vendor/bin/phpunit tests/Unit
 vendor/bin/phpunit tests/Feature
 
 # Bestimmter Test
-vendor/bin/phpunit tests/Unit/ExampleTest.php
+vendor/bin/phpunit tests/Unit/RouterTest.php
 ```
 
 ### Mit Coverage
@@ -90,7 +89,7 @@ vendor/bin/phpunit tests/Unit
 vendor/bin/phpunit tests/Unit --verbose
 
 # Mit Filter
-vendor/bin/phpunit --filter testExample
+vendor/bin/phpunit --filter testRoute
 ```
 
 ### Feature/E2E Tests
