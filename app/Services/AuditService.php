@@ -53,7 +53,7 @@ class AuditService
      * @param int|string $recordId The record ID (int for most tables, string for kremation vorgangs_id)
      * @return \Illuminate\Support\Collection
      */
-    public function getHistory(string $table, int $recordId)
+    public function getHistory(string $table, int|string $recordId)
     {
         return AuditLog::where('table_name', $table)
             ->where('record_id', $recordId)

@@ -56,9 +56,11 @@ class User extends Model
 
     /**
      * Get standorte (many-to-many)
+     * @return BelongsToMany<Standort, User>
      */
     public function standorte(): BelongsToMany
     {
+        /** @var BelongsToMany<Standort, User> */
         return $this->belongsToMany(Standort::class, 'user_standort', 'user_id', 'standort_id')
             ->withTimestamps()
             ->where('aktiv', true); // Nur aktive Standorte
@@ -161,6 +163,7 @@ class User extends Model
 
     /**
      * Get all allowed standort IDs for this user
+     * @return array<int>
      */
     public function getAllowedStandortIds(): array
     {

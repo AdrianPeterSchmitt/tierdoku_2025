@@ -168,9 +168,11 @@ class Kremation extends Model
 
         $allowedIds = $user->getAllowedStandortIds();
         if (empty($allowedIds)) {
+            /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
             return $query->whereRaw('1 = 0'); // Keine Ergebnisse wenn keine Standorte
         }
 
+        /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
         return $query->whereIn('standort_id', $allowedIds);
     }
 
@@ -187,6 +189,7 @@ class Kremation extends Model
         $searchTerm = trim($searchTerm);
 
         if (empty($searchTerm)) {
+            /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
             return $query->whereRaw('1 = 0'); // No results for empty search
         }
 
@@ -196,6 +199,7 @@ class Kremation extends Model
               ->orWhere('vorgangs_id', 'LIKE', $searchTerm . '%');
         });
 
+        /** @var \Illuminate\Database\Eloquent\Builder<Kremation> */
         return $query;
     }
 

@@ -11,7 +11,7 @@ parameters:
     # Note: Larastan requires full Laravel Framework, but we only use illuminate/database
     ignoreErrors:
         - '#Call to an undefined (static )?method.*::(where|find|create|orderBy|whereIn|exists|count|get|first|save|delete|update|insert)\(\)#'
-        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*::(forStandort|search|filterByHerkunft|filterByStatus|filterByDateRange)\(\)#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*::(forStandort|forAllowedStandorte|search|filterByHerkunft|filterByStatus|filterByDateRange)\(\)#'
         - '#Call to an undefined static method.*::(aktiv|where|find|create|orderBy|whereIn|exists|count|get|first|save|delete|update|insert)\(\)#'
         - '#Property.*does not accept Carbon\\Carbon#'
         - '#Method.*return type with generic class.*does not specify its types#'
